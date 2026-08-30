@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { initialState, createRun, decideApproval, validateExecution, completeExecution, completeOnboarding, registerProduct } from "../src/domain.mjs";
+import { initialState, createRun, decideApproval, validateExecution, completeExecution, completeOnboarding, registerProduct, updateVenture } from "../src/domain.mjs";
 
 test("onboarding branches to product analysis or autonomous discovery", () => {
   const discovery = initialState();
@@ -45,4 +45,13 @@ test("completed actions are idempotent", () => {
   decideApproval(state, run.id, "approved", "1");
   completeExecution(state, run.id, { status: "succeeded", idempotencyKey: run.action.idempotencyKey, cost: { amount: 0, currency: "EUR" }, outputArtifacts: [] });
   assert.equal(validateExecution(state, run.id, 0).replay, true);
+});
+
+test("owner can update paid offer checkout while non-Stripe URLs are rejected", () => {
+  const state = initialState();
+  updateVenture(state, { offers: [state.venture.offers[0], { ...state.venture.offers[1], name: "Validation Kit", price: 29, paymentUrl: "https://buy.stripe.com/live_example" }] });
+  assert.equal(state.venture.offers[1].name, "Validation Kit");
+  assert.equal(state.venture.offers[1].price, 29);
+  assert.equal(state.venture.offers[1].paymentUrl, "https://buy.stripe.com/live_example");
+  assert.throws(() => updateVenture(state, { offers: [state.venture.offers[0], { ...state.venture.offers[1], paymentUrl: "https://example.com/pay" }] }), /buy\.stripe\.com/);
 });

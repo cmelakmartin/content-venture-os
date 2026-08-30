@@ -85,7 +85,7 @@ export function createRun(state) {
 }
 
 function buildArtifacts(venture, at) {
-  const offer = venture.offers.find((item) => item.price === 19) || venture.offers[0];
+  const offer = venture.offers.find((item) => item.price > 0) || venture.offers[0];
   return [
     {
       id: crypto.randomUUID(), version: "1", type: "offer_plan", title: `${offer.name} — validation offer`, createdAt: at,
@@ -200,6 +200,24 @@ export function completeExecution(state, runId, receipt) {
 export function updateVenture(state, input) {
   for (const key of ["name", "audience", "promise", "sourceRights"]) {
     if (typeof input[key] === "string" && input[key].trim()) state.venture[key] = input[key].trim();
+  }
+  if (Array.isArray(input.offers)) {
+    input.offers.forEach((candidate, index) => {
+      const offer = state.venture.offers[index];
+      if (!offer || !candidate || typeof candidate !== "object") return;
+      if (typeof candidate.name === "string" && candidate.name.trim()) offer.name = candidate.name.trim().slice(0, 120);
+      const price = Number(candidate.price);
+      if (Number.isFinite(price) && price >= 0 && price <= 10_000) offer.price = Math.round(price * 100) / 100;
+      if (typeof candidate.paymentUrl === "string") {
+        const paymentUrl = candidate.paymentUrl.trim();
+        if (paymentUrl) {
+          let parsed;
+          try { parsed = new URL(paymentUrl); } catch { throw new Error("Checkout URLs must be valid HTTPS Stripe Payment Links."); }
+          if (parsed.protocol !== "https:" || parsed.hostname !== "buy.stripe.com") throw new Error("Checkout URLs must use https://buy.stripe.com/.");
+        }
+        offer.paymentUrl = paymentUrl;
+      }
+    });
   }
   state.audit.unshift({ at: new Date().toISOString(), event: "venture.updated", actor: "owner" });
   return state.venture;

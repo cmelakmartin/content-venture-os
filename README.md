@@ -88,6 +88,8 @@ venture.optimize
 funnel.publish_approved_revision
 ```
 
+The owner can edit offer names, EUR prices and Stripe Payment Links under **Business input**. Checkout URLs are restricted to `https://buy.stripe.com/`. A changed paid link is read by the public funnel immediately; use a test Payment Link until the fulfillment workflow has passed end to end.
+
 ## Required environment
 
 ```dotenv
