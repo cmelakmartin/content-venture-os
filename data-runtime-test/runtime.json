@@ -1,0 +1,117 @@
+{
+  "events": [
+    {
+      "id": "ce16da4f-1c7f-4ef0-af3d-52f478bed024",
+      "ventureId": "reference-ai-time-back",
+      "type": "email.not_configured",
+      "source": "resend",
+      "payload": {
+        "leadId": "53efd555-a6ed-448a-add4-55082b0e6686",
+        "externalId": null
+      },
+      "createdAt": "2026-08-26T06:21:26.265Z"
+    },
+    {
+      "id": "159700b9-a227-48ed-9b17-a4505b953c0b",
+      "ventureId": "reference-ai-time-back",
+      "type": "lead.captured",
+      "source": "public_funnel",
+      "payload": {
+        "leadId": "53efd555-a6ed-448a-add4-55082b0e6686",
+        "slug": "real-product"
+      },
+      "createdAt": "2026-08-26T06:21:26.264Z"
+    },
+    {
+      "id": "ee8f1bee-8b64-403e-93da-801027e4be1b",
+      "ventureId": "reference-ai-time-back",
+      "type": "funnel.view",
+      "source": "public_funnel",
+      "payload": {
+        "slug": "real-product"
+      },
+      "createdAt": "2026-08-26T06:21:26.259Z"
+    },
+    {
+      "id": "19dab908-d401-48c2-b631-b77a8f553b16",
+      "ventureId": "reference-ai-time-back",
+      "type": "funnel.published",
+      "source": "funnel_renderer",
+      "payload": {
+        "slug": "real-product",
+        "version": 1
+      },
+      "createdAt": "2026-08-26T06:21:26.238Z"
+    },
+    {
+      "id": "149de81a-211e-4dc5-8ac9-dff9126e591e",
+      "ventureId": "reference-ai-time-back",
+      "type": "agent.not_started",
+      "source": "control_plane",
+      "payload": {
+        "reason": "OPENAI_API_KEY not configured"
+      },
+      "createdAt": "2026-08-26T06:21:26.236Z"
+    },
+    {
+      "id": "a69e04d4-3fd6-46f0-816e-68b95984a9b4",
+      "ventureId": "reference-ai-time-back",
+      "type": "product.extracted",
+      "source": "ingestion",
+      "payload": {
+        "characters": 223,
+        "truncated": false,
+        "status": "completed"
+      },
+      "createdAt": "2026-08-26T06:21:26.235Z"
+    },
+    {
+      "id": "a0e79f49-70af-4b56-b34d-53871e901556",
+      "ventureId": "reference-ai-time-back",
+      "type": "runtime.activated",
+      "source": "operator",
+      "payload": {
+        "path": "existing_product",
+        "persistence": "local-json"
+      },
+      "createdAt": "2026-08-26T06:21:26.233Z"
+    }
+  ],
+  "leads": [
+    {
+      "id": "53efd555-a6ed-448a-add4-55082b0e6686",
+      "ventureId": "reference-ai-time-back",
+      "email": "buyer@example.com",
+      "consent": true,
+      "source": "real-product",
+      "createdAt": "2026-08-26T06:21:26.263Z"
+    }
+  ],
+  "agentRuns": [],
+  "funnels": [
+    {
+      "ventureId": "reference-ai-time-back",
+      "slug": "real-product",
+      "version": 1,
+      "status": "live",
+      "content": {
+        "offerName": "Real Product",
+        "audience": "English-speaking solo consultants, coaches and boutique agency owners",
+        "promise": "A practical path to reducing repetitive admin and marketing work with controlled AI automation.",
+        "headline": "Get your week back—one workflow at a time.",
+        "subheadline": "A practical, low-hype system for auditing repetitive work, automating the right tasks and protecting your attention.",
+        "benefits": [
+          "Find the most expensive workflow bottleneck",
+          "Choose one safe automation to implement first",
+          "Build a weekly operating rhythm that compounds"
+        ],
+        "leadMagnet": "Free AI Time-Leak Diagnostic",
+        "welcomeEmailSubject": "Your AI Time-Leak Diagnostic",
+        "welcomeEmailBody": "Thanks for joining. Start by listing the three recurring tasks that consume the most attention each week. Your diagnostic and next step are ready in the venture funnel."
+      },
+      "publishedAt": "2026-08-26T06:21:26.237Z"
+    }
+  ],
+  "orders": [],
+  "recommendations": []
+}

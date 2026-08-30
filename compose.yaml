@@ -1,0 +1,92 @@
+services:
+  venture-os:
+    image: localhost/content-venture-os-poc:latest
+    build:
+      context: .
+      dockerfile: Containerfile
+    ports:
+      - "127.0.0.1:${HOST_PORT:-4173}:3000"
+    environment:
+      DATABASE_URL: "postgres://venture:venture@postgres:5432/venture"
+      DATA_DIR: "/data"
+      EXECUTION_MODE: "${EXECUTION_MODE:-mock}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_IMAGE_MODEL: "${OPENAI_IMAGE_MODEL:-gpt-image-2}"
+      OPENAI_AGENT_MODEL: "${OPENAI_AGENT_MODEL:-gpt-5-mini}"
+      AGENT_PROVIDER: "${AGENT_PROVIDER:-crewai}"
+      CREWAI_BASE_URL: "http://crew-runtime:8000"
+      CREWAI_SHARED_SECRET: "${CREWAI_SHARED_SECRET:-local-crewai-secret-change-before-sharing}"
+      CREWAI_MODEL: "${CREWAI_MODEL:-openai/gpt-5-mini}"
+      CREWAI_REQUEST_TIMEOUT_MS: "${CREWAI_REQUEST_TIMEOUT_MS:-600000}"
+      IMAGE_ESTIMATED_COST_EUR: "${IMAGE_ESTIMATED_COST_EUR:-0.02}"
+      RESEND_API_KEY: "${RESEND_API_KEY:-}"
+      RESEND_FROM: "${RESEND_FROM:-}"
+      RESEND_WEBHOOK_SECRET: "${RESEND_WEBHOOK_SECRET:-}"
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+      N8N_WEBHOOK_BASE_URL: "${N8N_WEBHOOK_BASE_URL:-}"
+      N8N_SHARED_SECRET: "${N8N_SHARED_SECRET:-}"
+      N8N_FULFILLMENT_WEBHOOK: "${N8N_FULFILLMENT_WEBHOOK:-webhook/content-venture-fulfillment}"
+      N8N_WELCOME_WEBHOOK: "${N8N_WELCOME_WEBHOOK:-webhook/content-venture-welcome}"
+      N8N_OPTIMIZER_WEBHOOK: "${N8N_OPTIMIZER_WEBHOOK:-webhook/content-venture-optimize}"
+      N8N_PUBLISH_WEBHOOK: "${N8N_PUBLISH_WEBHOOK:-webhook/content-venture-publish}"
+      DELIVERY_SIGNING_SECRET: "${DELIVERY_SIGNING_SECRET:-local-poc-secret-change-before-sharing}"
+      DELIVERY_LINK_HOURS: "${DELIVERY_LINK_HOURS:-168}"
+      DELIVERY_MAX_DOWNLOADS: "${DELIVERY_MAX_DOWNLOADS:-5}"
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-http://localhost:4173}"
+      ALLOW_TEST_ACTIONS: "${ALLOW_TEST_ACTIONS:-true}"
+      AUTH_MODE: "${AUTH_MODE:-disabled}"
+      OWNER_USERNAME: "${OWNER_USERNAME:-owner}"
+      OWNER_PASSWORD: "${OWNER_PASSWORD:-}"
+      AUTH_SECRET: "${AUTH_SECRET:-}"
+      AUTH_SESSION_HOURS: "${AUTH_SESSION_HOURS:-12}"
+      AUTH_COOKIE_SECURE: "${AUTH_COOKIE_SECURE:-false}"
+    volumes:
+      - venture-os-data:/data
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      crew-runtime:
+        condition: service_healthy
+
+  crew-runtime:
+    image: localhost/content-venture-crewai-poc:latest
+    build:
+      context: ./crew-runtime
+      dockerfile: Containerfile
+    ports:
+      - "127.0.0.1:${CREWAI_PORT:-8001}:8000"
+    environment:
+      PORT: "8000"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      CREWAI_MODEL: "${CREWAI_MODEL:-openai/gpt-5-mini}"
+      CREWAI_SHARED_SECRET: "${CREWAI_SHARED_SECRET:-local-crewai-secret-change-before-sharing}"
+      OTEL_SDK_DISABLED: "true"
+      CREWAI_DISABLE_TELEMETRY: "true"
+    healthcheck:
+      test: ["CMD", "python", "healthcheck.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+  postgres:
+    image: docker.io/library/postgres:17-alpine
+    environment:
+      POSTGRES_USER: venture
+      POSTGRES_PASSWORD: venture
+      POSTGRES_DB: venture
+    volumes:
+      - venture-os-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U venture -d venture"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  venture-os-data:
+  venture-os-postgres:

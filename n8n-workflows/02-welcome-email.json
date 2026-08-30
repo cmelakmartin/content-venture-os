@@ -1,0 +1,22 @@
+{
+  "name": "Content Venture OS - Welcome Email",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "content-venture-welcome", "authentication": "headerAuth", "responseMode": "onReceived", "options": {} },
+      "id": "2c614685-2117-45d4-861f-b0c80d887c16", "name": "Welcome Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [-420, 80],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_OS_SECRET", "name": "Content Venture OS API" } }, "webhookId": "content-venture-welcome"
+    },
+    {
+      "parameters": { "method": "POST", "url": "https://api.resend.com/emails", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ from: $json.body.email.from, to: [$json.body.email.to], subject: $json.body.email.subject, html: $json.body.email.html }) }}", "options": {} },
+      "id": "62402543-ae9f-4036-a47b-3296e92bcfc6", "name": "Send Welcome Email", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [-140, 80],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_RESEND_SECRET", "name": "Resend API" } }, "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": { "method": "POST", "url": "https://REPLACE-WITH-OS-URL.example/api/n8n/results", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ capability: 'email.send_welcome', status: $json.error ? 'failed' : 'succeeded', idempotencyKey: $('Welcome Webhook').item.json.body.idempotencyKey, externalExecutionId: $execution.id, evidence: { emailId: $json.id || null }, error: $json.error || null }) }}", "options": {} },
+      "id": "0bcb28ec-d556-4eb3-8373-b1dad68212c0", "name": "Return Email Receipt", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [140, 80],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_OS_SECRET", "name": "Content Venture OS API" } }
+    }
+  ],
+  "connections": { "Welcome Webhook": { "main": [[{ "node": "Send Welcome Email", "type": "main", "index": 0 }]] }, "Send Welcome Email": { "main": [[{ "node": "Return Email Receipt", "type": "main", "index": 0 }]] } },
+  "active": false, "settings": { "executionOrder": "v1" }, "versionId": "bdf726be-278f-49a1-a283-4f57dc415413", "meta": { "templateCredsSetupCompleted": false }, "tags": []
+}

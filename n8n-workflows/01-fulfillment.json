@@ -1,0 +1,36 @@
+{
+  "name": "Content Venture OS - Protected Fulfillment",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "content-venture-fulfillment", "authentication": "headerAuth", "responseMode": "onReceived", "options": {} },
+      "id": "76f28248-8a19-46d7-bc4e-00c75f03f306", "name": "Fulfillment Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [-620, 80],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_OS_SECRET", "name": "Content Venture OS API" } }, "webhookId": "content-venture-fulfillment"
+    },
+    {
+      "parameters": {
+        "method": "POST", "url": "https://REPLACE-WITH-OS-URL.example/api/n8n/actions/prepare-fulfillment", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
+        "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify($json.body) }}", "options": {}
+      },
+      "id": "6268ca83-7707-440a-9d31-bb4eb69298fa", "name": "Create Protected Entitlement", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [-360, 80],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_OS_SECRET", "name": "Content Venture OS API" } }
+    },
+    {
+      "parameters": {
+        "method": "POST", "url": "https://api.resend.com/emails", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
+        "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ from: $json.email.from, to: [$json.email.to], subject: $json.email.subject, html: $json.email.html }) }}", "options": {}
+      },
+      "id": "21b34724-bbca-43fd-998f-08794128c53d", "name": "Send Product Email", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [-80, 80],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_RESEND_SECRET", "name": "Resend API" } }, "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST", "url": "https://REPLACE-WITH-OS-URL.example/api/n8n/results", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
+        "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ capability: 'stripe.fulfill_product', status: $json.error ? 'failed' : 'succeeded', idempotencyKey: $('Fulfillment Webhook').item.json.body.idempotencyKey, externalExecutionId: $execution.id, evidence: { entitlementId: $('Create Protected Entitlement').item.json.entitlementId, deliveryUrl: $('Create Protected Entitlement').item.json.deliveryUrl, emailId: $json.id || null }, error: $json.error || null }) }}", "options": {}
+      },
+      "id": "8128ec59-2aee-451e-a73f-557072e2f36d", "name": "Return Fulfillment Receipt", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [200, 80],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_OS_SECRET", "name": "Content Venture OS API" } }
+    }
+  ],
+  "connections": { "Fulfillment Webhook": { "main": [[{ "node": "Create Protected Entitlement", "type": "main", "index": 0 }]] }, "Create Protected Entitlement": { "main": [[{ "node": "Send Product Email", "type": "main", "index": 0 }]] }, "Send Product Email": { "main": [[{ "node": "Return Fulfillment Receipt", "type": "main", "index": 0 }]] } },
+  "active": false, "settings": { "executionOrder": "v1" }, "versionId": "22d37893-9d42-4c3e-a8dd-aa2afe982705", "meta": { "templateCredsSetupCompleted": false }, "tags": []
+}

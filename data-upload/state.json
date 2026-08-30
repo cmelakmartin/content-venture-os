@@ -1,0 +1,321 @@
+{
+  "schemaVersion": "1.0",
+  "onboarding": {
+    "completed": true,
+    "path": "existing_product",
+    "autopilot": true,
+    "product": {
+      "id": "d8d312d0-888d-4ad9-80df-1ce2c156613a",
+      "originalName": "my-course.md",
+      "storedName": "d8d312d0-888d-4ad9-80df-1ce2c156613a.md",
+      "bytes": 18,
+      "uploadedAt": "2026-08-25T21:41:54.260Z"
+    },
+    "completedAt": "2026-08-25T21:41:54.285Z"
+  },
+  "venture": {
+    "id": "reference-ai-time-back",
+    "name": "My Course",
+    "audience": "English-speaking solo consultants, coaches and boutique agency owners",
+    "promise": "A practical path to reducing repetitive admin and marketing work with controlled AI automation.",
+    "sourceRights": "Purchased source content; adapt and reframe. Do not transfer resale rights or distribute as a raw library.",
+    "currency": "EUR",
+    "offers": [
+      {
+        "name": "AI Time-Leak Diagnostic",
+        "price": 0,
+        "role": "Lead magnet",
+        "paymentUrl": ""
+      },
+      {
+        "name": "Time-Back Starter Kit",
+        "price": 19,
+        "role": "Entry offer",
+        "paymentUrl": "https://buy.stripe.com/test_6oU5kxaTI8sM8sM5qq9AA00"
+      },
+      {
+        "name": "AI Time-Back System",
+        "price": 79,
+        "role": "Core offer",
+        "paymentUrl": "https://buy.stripe.com/test_aFafZb8LA4cwgZi2ee9AA01"
+      }
+    ]
+  },
+  "connections": {
+    "openai": {
+      "status": "needs_setup",
+      "mode": "mock"
+    },
+    "stripe": {
+      "status": "test_links_ready",
+      "mode": "test_only"
+    },
+    "email": {
+      "status": "manual",
+      "mode": "external_action"
+    },
+    "ads": {
+      "status": "manual",
+      "mode": "approval_gated"
+    }
+  },
+  "runs": [
+    {
+      "id": "2583ae5c-97e3-42cb-a644-ec0be4104b78",
+      "createdAt": "2026-08-25T21:41:54.285Z",
+      "updatedAt": "2026-08-25T21:41:54.303Z",
+      "status": "completed",
+      "currentStage": 8,
+      "budget": {
+        "ceiling": 1,
+        "currency": "EUR",
+        "spent": 0
+      },
+      "stageLog": [
+        {
+          "number": 1,
+          "name": "Intake & rights",
+          "status": "completed",
+          "at": "2026-08-25T21:41:54.285Z"
+        },
+        {
+          "number": 2,
+          "name": "Offer architecture",
+          "status": "completed",
+          "at": "2026-08-25T21:41:54.285Z"
+        },
+        {
+          "number": 3,
+          "name": "Sales package",
+          "status": "completed",
+          "at": "2026-08-25T21:41:54.285Z"
+        },
+        {
+          "number": 4,
+          "name": "Creative brief",
+          "status": "completed",
+          "at": "2026-08-25T21:41:54.285Z"
+        },
+        {
+          "number": 5,
+          "name": "Approval gate",
+          "status": "approved",
+          "at": "2026-08-25T21:41:54.296Z"
+        },
+        {
+          "number": 6,
+          "name": "Image execution",
+          "status": "succeeded",
+          "at": "2026-08-25T21:41:54.303Z"
+        },
+        {
+          "number": 7,
+          "name": "Launch package",
+          "status": "completed",
+          "at": "2026-08-25T21:41:54.303Z"
+        },
+        {
+          "number": 8,
+          "name": "Results & next run",
+          "status": "completed",
+          "at": "2026-08-25T21:41:54.303Z"
+        }
+      ],
+      "artifacts": [
+        {
+          "id": "dc2c1e66-8474-42e7-9345-cd6c2dfd8c7c",
+          "version": "1",
+          "type": "offer_plan",
+          "title": "Time-Back Starter Kit — validation offer",
+          "createdAt": "2026-08-25T21:41:54.285Z",
+          "content": "Audience: English-speaking solo consultants, coaches and boutique agency owners\nOffer: Time-Back Starter Kit (€19)\nPromise: A practical path to reducing repetitive admin and marketing work with controlled AI automation.\nValidation: organic demand before domain purchase or paid ads."
+        },
+        {
+          "id": "6db971b0-e93a-405d-b3a6-2c62a5d92593",
+          "version": "1",
+          "type": "sales_package",
+          "title": "Sales page outline",
+          "createdAt": "2026-08-25T21:41:54.285Z",
+          "content": "Headline: Get your week back—one workflow at a time.\nSections: problem diagnostic; Audit → Automate → Protect; what is included; honest limitations; test checkout.\nClaims rule: no guaranteed time, revenue or ROI claims."
+        },
+        {
+          "id": "f034b6f8-d6d2-482a-b98a-9229387d12d7",
+          "version": "1",
+          "type": "funnel",
+          "title": "Autonomous funnel map",
+          "createdAt": "2026-08-25T21:41:54.285Z",
+          "content": "LinkedIn diagnostic content → free AI Time-Leak Diagnostic → result-specific email → €19 Starter Kit → €79 core offer.\nTracking: visit, diagnostic complete, opt-in, checkout start, purchase and first-action completion.\nDeployment: prepared in mock mode; public publishing remains gated."
+        },
+        {
+          "id": "68c81c52-86e8-40aa-b537-c6225ea141f0",
+          "version": "1",
+          "type": "email_sequence",
+          "title": "Five-email nurture sequence",
+          "createdAt": "2026-08-25T21:41:54.285Z",
+          "content": "1. Deliver the diagnostic result.\n2. One practical audit win.\n3. How to choose the first workflow.\n4. Why tools alone do not save time.\n5. Invite the reader to the €19 Starter Kit.\nStatus: drafted, not sent."
+        },
+        {
+          "id": "fe233b78-1ce5-433c-9499-7ece0926c988",
+          "version": "1",
+          "type": "ad_campaign",
+          "title": "Paid validation draft",
+          "createdAt": "2026-08-25T21:41:54.285Z",
+          "content": "Objective: diagnostic completions.\nBudget proposal: €10/day for seven days.\nConcepts: “Where does your week leak?” and “Audit → Automate → Protect.”\nActivation: blocked until organic validation and explicit budget approval."
+        },
+        {
+          "id": "182d4f95-0911-4fed-b0e2-b118030313af",
+          "version": "1",
+          "type": "creative_brief",
+          "title": "Private launch visual brief",
+          "createdAt": "2026-08-25T21:41:54.285Z",
+          "content": "Create one square editorial visual for My Course. Show a calm solo business owner moving through three clearly separated stages: Audit, Automate, Protect. Warm ivory background, obsidian typography, one restrained copper accent, generous whitespace, premium editorial feel. No logos, testimonials, public figures, income claims, time-saving guarantees, or misleading product screenshots. The output is a private draft, not a final or published asset."
+        },
+        {
+          "id": "27f0a982-a85f-4d69-8e94-a73415c31d7c",
+          "version": "1",
+          "type": "operations_plan",
+          "title": "Recurring operations plan",
+          "createdAt": "2026-08-25T21:41:54.285Z",
+          "content": "Daily: capture funnel health and exceptions.\nWeekly: summarize traffic, opt-ins, sales, refunds and objections; propose one experiment.\nMonthly: review offer economics, content themes and connector spend.\nEscalate only: claim changes, spend increases, public activation, payment failures and customer complaints."
+        }
+      ],
+      "action": {
+        "id": "299ad2cb-0e65-4243-8275-8f61140efa31",
+        "capability": "image.generate_asset",
+        "status": "succeeded",
+        "subject": {
+          "artifactId": "182d4f95-0911-4fed-b0e2-b118030313af",
+          "version": "1"
+        },
+        "constraints": {
+          "environment": "sandbox",
+          "visibility": "private",
+          "outputCount": 1,
+          "maxCost": 1,
+          "currency": "EUR",
+          "allowedProviders": [
+            "mock",
+            "openai"
+          ]
+        },
+        "approval": {
+          "id": "2f37e6ec-225c-4476-aa6c-9cb1999a1b65",
+          "decision": "approved",
+          "approvedVersion": "1",
+          "actor": "owner",
+          "at": "2026-08-25T21:41:54.296Z"
+        },
+        "idempotencyKey": "reference-ai-time-back:image.generate_asset:182d4f95-0911-4fed-b0e2-b118030313af:v1"
+      },
+      "receipt": {
+        "schemaVersion": "1.0",
+        "status": "succeeded",
+        "capability": "image.generate_asset",
+        "actionId": "299ad2cb-0e65-4243-8275-8f61140efa31",
+        "idempotencyKey": "reference-ai-time-back:image.generate_asset:182d4f95-0911-4fed-b0e2-b118030313af:v1",
+        "provider": "mock",
+        "providerOperationId": "27910d30-27c5-4f90-b6fa-90e014020347",
+        "attempts": 1,
+        "startedAt": "2026-08-25T21:41:54.302Z",
+        "completedAt": "2026-08-25T21:41:54.303Z",
+        "cost": {
+          "amount": 0,
+          "currency": "EUR",
+          "estimated": false
+        },
+        "outputArtifacts": [
+          {
+            "artifactId": "08365281-f8d6-4b2f-97e3-04e4230edbc3",
+            "version": "1",
+            "contentType": "image/svg+xml",
+            "dimensions": "1024x1024",
+            "visibility": "private",
+            "storedUri": "/api/assets/08365281-f8d6-4b2f-97e3-04e4230edbc3.svg",
+            "provenance": {
+              "model": "deterministic-mock",
+              "promptArtifactId": "182d4f95-0911-4fed-b0e2-b118030313af",
+              "promptArtifactVersion": "1"
+            }
+          }
+        ]
+      },
+      "origin": "existing_product",
+      "autopilot": true,
+      "specialists": [
+        "Product Analyst",
+        "Rights Reviewer",
+        "Offer Architect",
+        "Funnel Builder",
+        "Page Builder",
+        "Lifecycle Marketer",
+        "Ad Planner",
+        "Operations Agent"
+      ]
+    }
+  ],
+  "reviewQueue": [
+    {
+      "id": "04527484-0ee4-4ac9-a61c-9a894ae5b845",
+      "type": "visual_direction",
+      "title": "Approve the private visual direction",
+      "status": "completed",
+      "runId": "2583ae5c-97e3-42cb-a644-ec0be4104b78",
+      "reason": "A visual will be generated from creative brief v1."
+    },
+    {
+      "id": "a789625d-6943-41ff-be3b-d241016d3ef4",
+      "type": "domain_registration",
+      "title": "Approve domain registration",
+      "status": "waiting",
+      "runId": "2583ae5c-97e3-42cb-a644-ec0be4104b78",
+      "reason": "The system will first rank available names and validate organic demand."
+    },
+    {
+      "id": "10f275ca-dea1-4a0f-b1bc-7e2f1396d2cc",
+      "type": "campaign_activation",
+      "title": "Approve launch and ad budget",
+      "status": "waiting",
+      "runId": "2583ae5c-97e3-42cb-a644-ec0be4104b78",
+      "reason": "Email sending, public publishing and paid media remain inactive."
+    }
+  ],
+  "audit": [
+    {
+      "at": "2026-08-25T21:41:54.303Z",
+      "event": "execution.succeeded",
+      "actor": "adapter",
+      "runId": "2583ae5c-97e3-42cb-a644-ec0be4104b78",
+      "actionId": "299ad2cb-0e65-4243-8275-8f61140efa31"
+    },
+    {
+      "at": "2026-08-25T21:41:54.296Z",
+      "event": "approval.approved",
+      "actor": "owner",
+      "runId": "2583ae5c-97e3-42cb-a644-ec0be4104b78",
+      "actionId": "299ad2cb-0e65-4243-8275-8f61140efa31"
+    },
+    {
+      "at": "2026-08-25T21:41:54.285Z",
+      "event": "onboarding.existing_product",
+      "actor": "owner",
+      "runId": "2583ae5c-97e3-42cb-a644-ec0be4104b78"
+    },
+    {
+      "at": "2026-08-25T21:41:54.285Z",
+      "event": "run.prepared",
+      "actor": "system",
+      "runId": "2583ae5c-97e3-42cb-a644-ec0be4104b78"
+    },
+    {
+      "at": "2026-08-25T21:41:54.260Z",
+      "event": "product.uploaded",
+      "actor": "owner",
+      "filename": "my-course.md"
+    },
+    {
+      "at": "2026-08-25T21:41:31.735Z",
+      "event": "workspace.seeded",
+      "actor": "system"
+    }
+  ]
+}

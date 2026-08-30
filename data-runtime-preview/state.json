@@ -1,0 +1,246 @@
+{
+  "schemaVersion": "1.0",
+  "onboarding": {
+    "completed": true,
+    "path": "existing_product",
+    "autopilot": true,
+    "product": {
+      "id": "a27001cb-ae97-4afa-8962-86616b1368b6",
+      "originalName": "The Content Batching System for Athletes - Guide.pdf",
+      "storedName": "a27001cb-ae97-4afa-8962-86616b1368b6.pdf",
+      "bytes": 369663,
+      "uploadedAt": "2026-08-26T06:32:31.708Z"
+    },
+    "completedAt": "2026-08-26T06:32:31.720Z"
+  },
+  "venture": {
+    "id": "reference-ai-time-back",
+    "name": "The Content Batching System For Athletes   Guide",
+    "audience": "English-speaking solo consultants, coaches and boutique agency owners",
+    "promise": "A practical path to reducing repetitive admin and marketing work with controlled AI automation.",
+    "sourceRights": "Purchased source content; adapt and reframe. Do not transfer resale rights or distribute as a raw library.",
+    "currency": "EUR",
+    "offers": [
+      {
+        "name": "AI Time-Leak Diagnostic",
+        "price": 0,
+        "role": "Lead magnet",
+        "paymentUrl": ""
+      },
+      {
+        "name": "Time-Back Starter Kit",
+        "price": 19,
+        "role": "Entry offer",
+        "paymentUrl": "https://buy.stripe.com/test_6oU5kxaTI8sM8sM5qq9AA00"
+      },
+      {
+        "name": "AI Time-Back System",
+        "price": 79,
+        "role": "Core offer",
+        "paymentUrl": "https://buy.stripe.com/test_aFafZb8LA4cwgZi2ee9AA01"
+      }
+    ]
+  },
+  "connections": {
+    "openai": {
+      "status": "needs_setup",
+      "mode": "mock"
+    },
+    "stripe": {
+      "status": "test_links_ready",
+      "mode": "test_only"
+    },
+    "email": {
+      "status": "manual",
+      "mode": "external_action"
+    },
+    "ads": {
+      "status": "manual",
+      "mode": "approval_gated"
+    }
+  },
+  "runs": [
+    {
+      "id": "8b5d4bc8-92c2-4c8a-800f-85a19ac49e19",
+      "createdAt": "2026-08-26T06:32:31.721Z",
+      "updatedAt": "2026-08-26T06:32:31.721Z",
+      "status": "awaiting_approval",
+      "currentStage": 5,
+      "budget": {
+        "ceiling": 1,
+        "currency": "EUR",
+        "spent": 0
+      },
+      "stageLog": [
+        {
+          "number": 1,
+          "name": "Intake & rights",
+          "status": "completed",
+          "at": "2026-08-26T06:32:31.721Z"
+        },
+        {
+          "number": 2,
+          "name": "Offer architecture",
+          "status": "completed",
+          "at": "2026-08-26T06:32:31.721Z"
+        },
+        {
+          "number": 3,
+          "name": "Sales package",
+          "status": "completed",
+          "at": "2026-08-26T06:32:31.721Z"
+        },
+        {
+          "number": 4,
+          "name": "Creative brief",
+          "status": "completed",
+          "at": "2026-08-26T06:32:31.721Z"
+        }
+      ],
+      "artifacts": [
+        {
+          "id": "99ca7851-2446-4870-b2c1-e0fd1e9c3ebe",
+          "version": "1",
+          "type": "offer_plan",
+          "title": "Time-Back Starter Kit — validation offer",
+          "createdAt": "2026-08-26T06:32:31.721Z",
+          "content": "Audience: English-speaking solo consultants, coaches and boutique agency owners\nOffer: Time-Back Starter Kit (€19)\nPromise: A practical path to reducing repetitive admin and marketing work with controlled AI automation.\nValidation: organic demand before domain purchase or paid ads."
+        },
+        {
+          "id": "25f3993a-ac75-48f5-b20d-4d728de88b9b",
+          "version": "1",
+          "type": "sales_package",
+          "title": "Sales page outline",
+          "createdAt": "2026-08-26T06:32:31.721Z",
+          "content": "Headline: Get your week back—one workflow at a time.\nSections: problem diagnostic; Audit → Automate → Protect; what is included; honest limitations; test checkout.\nClaims rule: no guaranteed time, revenue or ROI claims."
+        },
+        {
+          "id": "319a7a0b-eae5-4336-80c4-af45f8cbc166",
+          "version": "1",
+          "type": "funnel",
+          "title": "Autonomous funnel map",
+          "createdAt": "2026-08-26T06:32:31.721Z",
+          "content": "LinkedIn diagnostic content → free AI Time-Leak Diagnostic → result-specific email → €19 Starter Kit → €79 core offer.\nTracking: visit, diagnostic complete, opt-in, checkout start, purchase and first-action completion.\nDeployment: prepared in mock mode; public publishing remains gated."
+        },
+        {
+          "id": "0a728b0f-c99a-4835-89f2-0b6b3f590768",
+          "version": "1",
+          "type": "email_sequence",
+          "title": "Five-email nurture sequence",
+          "createdAt": "2026-08-26T06:32:31.721Z",
+          "content": "1. Deliver the diagnostic result.\n2. One practical audit win.\n3. How to choose the first workflow.\n4. Why tools alone do not save time.\n5. Invite the reader to the €19 Starter Kit.\nStatus: drafted, not sent."
+        },
+        {
+          "id": "3fcf7f34-000f-48b1-9800-0deaa0910b6b",
+          "version": "1",
+          "type": "ad_campaign",
+          "title": "Paid validation draft",
+          "createdAt": "2026-08-26T06:32:31.721Z",
+          "content": "Objective: diagnostic completions.\nBudget proposal: €10/day for seven days.\nConcepts: “Where does your week leak?” and “Audit → Automate → Protect.”\nActivation: blocked until organic validation and explicit budget approval."
+        },
+        {
+          "id": "7d9b5b35-22b2-4802-8360-1f8b9b37c349",
+          "version": "1",
+          "type": "creative_brief",
+          "title": "Private launch visual brief",
+          "createdAt": "2026-08-26T06:32:31.721Z",
+          "content": "Create one square editorial visual for The Content Batching System For Athletes   Guide. Show a calm solo business owner moving through three clearly separated stages: Audit, Automate, Protect. Warm ivory background, obsidian typography, one restrained copper accent, generous whitespace, premium editorial feel. No logos, testimonials, public figures, income claims, time-saving guarantees, or misleading product screenshots. The output is a private draft, not a final or published asset."
+        },
+        {
+          "id": "fe650b1b-e4cc-4cbc-a159-fac84159e1ce",
+          "version": "1",
+          "type": "operations_plan",
+          "title": "Recurring operations plan",
+          "createdAt": "2026-08-26T06:32:31.721Z",
+          "content": "Daily: capture funnel health and exceptions.\nWeekly: summarize traffic, opt-ins, sales, refunds and objections; propose one experiment.\nMonthly: review offer economics, content themes and connector spend.\nEscalate only: claim changes, spend increases, public activation, payment failures and customer complaints."
+        }
+      ],
+      "action": {
+        "id": "ea5c1fb8-1392-47a9-b2c7-4b1d01ff4f44",
+        "capability": "image.generate_asset",
+        "status": "pending_approval",
+        "subject": {
+          "artifactId": "7d9b5b35-22b2-4802-8360-1f8b9b37c349",
+          "version": "1"
+        },
+        "constraints": {
+          "environment": "sandbox",
+          "visibility": "private",
+          "outputCount": 1,
+          "maxCost": 1,
+          "currency": "EUR",
+          "allowedProviders": [
+            "mock",
+            "openai"
+          ]
+        },
+        "approval": null,
+        "idempotencyKey": "reference-ai-time-back:image.generate_asset:7d9b5b35-22b2-4802-8360-1f8b9b37c349:v1"
+      },
+      "receipt": null,
+      "origin": "existing_product",
+      "autopilot": true,
+      "specialists": [
+        "Product Analyst",
+        "Rights Reviewer",
+        "Offer Architect",
+        "Funnel Builder",
+        "Page Builder",
+        "Lifecycle Marketer",
+        "Ad Planner",
+        "Operations Agent"
+      ]
+    }
+  ],
+  "reviewQueue": [
+    {
+      "id": "6f9f4eb7-4544-41d4-a1c6-cf39e0c034cd",
+      "type": "visual_direction",
+      "title": "Approve the private visual direction",
+      "status": "ready",
+      "runId": "8b5d4bc8-92c2-4c8a-800f-85a19ac49e19",
+      "reason": "A visual will be generated from creative brief v1."
+    },
+    {
+      "id": "839119f6-cd4f-403c-a304-a43d9723eccf",
+      "type": "domain_registration",
+      "title": "Approve domain registration",
+      "status": "waiting",
+      "runId": "8b5d4bc8-92c2-4c8a-800f-85a19ac49e19",
+      "reason": "The system will first rank available names and validate organic demand."
+    },
+    {
+      "id": "24784eb4-e38b-4090-9c34-4272f802fc47",
+      "type": "campaign_activation",
+      "title": "Approve launch and ad budget",
+      "status": "waiting",
+      "runId": "8b5d4bc8-92c2-4c8a-800f-85a19ac49e19",
+      "reason": "Email sending, public publishing and paid media remain inactive."
+    }
+  ],
+  "audit": [
+    {
+      "at": "2026-08-26T06:32:31.720Z",
+      "event": "onboarding.existing_product",
+      "actor": "owner",
+      "runId": "8b5d4bc8-92c2-4c8a-800f-85a19ac49e19"
+    },
+    {
+      "at": "2026-08-26T06:32:31.721Z",
+      "event": "run.prepared",
+      "actor": "system",
+      "runId": "8b5d4bc8-92c2-4c8a-800f-85a19ac49e19"
+    },
+    {
+      "at": "2026-08-26T06:32:31.708Z",
+      "event": "product.uploaded",
+      "actor": "owner",
+      "filename": "The Content Batching System for Athletes - Guide.pdf"
+    },
+    {
+      "at": "2026-08-26T06:10:57.071Z",
+      "event": "workspace.seeded",
+      "actor": "system"
+    }
+  ]
+}

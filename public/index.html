@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A supervised execution PoC for a digital product venture.">
+  <title>Content Venture OS</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <a class="brand" href="#dashboard" aria-label="Content Venture OS dashboard"><span>CV</span><strong>Content Venture<br>Autopilot</strong></a>
+      <nav aria-label="Primary navigation">
+        <a href="#dashboard" data-page="dashboard">Overview</a>
+        <a href="#venture" data-page="venture">Business input</a>
+        <a href="#runs" data-page="runs">Work &amp; evidence</a>
+        <a href="#connections" data-page="connections">Execution setup</a>
+      </nav>
+      <div class="aside-note"><span class="pulse"></span><div><strong>Margarita mode</strong><small>Agents work. You handle consequential approvals.</small></div></div>
+    </aside>
+    <main>
+      <header><div><p class="eyebrow">Private operating workspace</p><h1 id="page-title">Overview</h1></div><div class="header-actions"><div id="mode-chip" class="chip">Loading…</div><button class="secondary" id="logout">Sign out</button></div></header>
+      <div id="notice" role="status" aria-live="polite"></div>
+      <section id="app" aria-busy="true"></section>
+    </main>
+  </div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

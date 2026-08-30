@@ -1,0 +1,117 @@
+{
+  "events": [
+    {
+      "id": "1f86735e-ce02-4385-bce6-1fc8bad9ee3f",
+      "ventureId": "reference-ai-time-back",
+      "type": "fulfillment.queued",
+      "source": "control_plane",
+      "payload": {
+        "provider": "n8n",
+        "capability": "stripe.fulfill_product",
+        "status": "accepted",
+        "idempotencyKey": "fulfill-test_n8n_status_e2e",
+        "externalExecutionId": "mock-n8n-execution"
+      },
+      "createdAt": "2026-08-26T22:40:26.155Z"
+    },
+    {
+      "id": "c9bfb614-c6da-4f8a-b487-3792ebaf3d8a",
+      "ventureId": "reference-ai-time-back",
+      "type": "execution.succeeded",
+      "source": "n8n",
+      "payload": {
+        "capability": "stripe.fulfill_product",
+        "idempotencyKey": "fulfill-test_n8n_action_e2e",
+        "externalExecutionId": "mock-n8n-execution",
+        "evidence": {
+          "entitlementId": "8327f32b-f9ab-42d6-bb3c-f65fec0ec6cf"
+        },
+        "error": null
+      },
+      "createdAt": "2026-08-26T22:38:02.740Z"
+    },
+    {
+      "id": "f735cf8c-fbae-4b34-8d34-d20fb6b56f8d",
+      "ventureId": "reference-ai-time-back",
+      "type": "fulfillment.downloaded",
+      "source": "protected_delivery",
+      "payload": {
+        "entitlementId": "8327f32b-f9ab-42d6-bb3c-f65fec0ec6cf",
+        "downloadCount": 1
+      },
+      "createdAt": "2026-08-26T22:37:46.572Z"
+    },
+    {
+      "id": "809a9ece-3ee5-4b19-ae1c-7af9c9b49d63",
+      "ventureId": "reference-ai-time-back",
+      "type": "fulfillment.prepared",
+      "source": "control_plane",
+      "payload": {
+        "orderId": "252ba9db-9f22-42bd-901c-2d474ac1cfa3",
+        "entitlementId": "8327f32b-f9ab-42d6-bb3c-f65fec0ec6cf",
+        "executor": "n8n"
+      },
+      "createdAt": "2026-08-26T22:37:44.442Z"
+    },
+    {
+      "id": "fe666907-56fc-4bb8-8a13-ae6f508ba53c",
+      "ventureId": "reference-ai-time-back",
+      "type": "order.paid",
+      "source": "n8n_test",
+      "payload": {
+        "orderId": "252ba9db-9f22-42bd-901c-2d474ac1cfa3",
+        "externalId": "test_n8n_action_e2e"
+      },
+      "createdAt": "2026-08-26T22:37:44.440Z"
+    },
+    {
+      "id": "d0b104c8-c3c8-4c06-a0aa-14977a777da0",
+      "ventureId": "reference-ai-time-back",
+      "type": "fulfillment.queued",
+      "source": "control_plane",
+      "payload": {
+        "provider": "n8n",
+        "capability": "stripe.fulfill_product",
+        "status": "accepted",
+        "idempotencyKey": "fulfill-test_n8n_e2e",
+        "externalExecutionId": "mock-n8n-execution"
+      },
+      "createdAt": "2026-08-26T22:37:21.742Z"
+    }
+  ],
+  "leads": [],
+  "agentRuns": [],
+  "funnels": [],
+  "orders": [
+    {
+      "id": "252ba9db-9f22-42bd-901c-2d474ac1cfa3",
+      "ventureId": "reference-ai-time-back",
+      "provider": "stripe",
+      "externalId": "test_n8n_action_e2e",
+      "email": "buyer@example.com",
+      "amount": 19,
+      "currency": "EUR",
+      "createdAt": "2026-08-26T22:37:44.422Z",
+      "status": "paid"
+    }
+  ],
+  "recommendations": [],
+  "entitlements": [
+    {
+      "id": "8327f32b-f9ab-42d6-bb3c-f65fec0ec6cf",
+      "ventureId": "reference-ai-time-back",
+      "orderId": "252ba9db-9f22-42bd-901c-2d474ac1cfa3",
+      "externalOrderId": "test_n8n_action_e2e",
+      "email": "buyer@example.com",
+      "productStoredName": "a27001cb-ae97-4afa-8962-86616b1368b6.pdf",
+      "tokenHash": "5bb83fca2154ffa93686c7f63e2a62a60c7410d862bf71d4dd0833cce47a218e",
+      "expiresAt": "2026-09-02T22:37:44.427Z",
+      "maxDownloads": 5,
+      "deliveryUrl": "http://localhost:4188/download/eyJlbnRpdGxlbWVudElkIjoiODMyN2YzMmItZjlhYi00MmQ2LWJiM2MtZjY1ZmVjMGVjNmNmIiwiZXhwIjoxNzg4Mzg4NjY0NDI3LCJub25jZSI6ImNLeWtJdW5jeFdiN1VxbDcifQ.v9XCJ3fCL3ukaz9qzJMeEHQl6PHYNcyBfOITt981W_Q",
+      "emailStatus": "sent",
+      "downloadCount": 1,
+      "revoked": false,
+      "createdAt": "2026-08-26T22:37:44.436Z"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "Content Venture OS - Publish Approved Funnel Revision",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "content-venture-publish", "authentication": "headerAuth", "responseMode": "onReceived", "options": {} },
+      "id": "95d23e8d-b74b-44d6-9664-1d14ec1c8db5", "name": "Publish Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [-420, 80],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_OS_SECRET", "name": "Content Venture OS API" } }, "webhookId": "content-venture-publish"
+    },
+    {
+      "parameters": { "method": "POST", "url": "https://REPLACE-WITH-OS-URL.example/api/n8n/actions/apply-recommendation", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify($json.body) }}", "options": {} },
+      "id": "fb459434-ec41-4230-b169-3a1716709b47", "name": "Apply Exact Approved Patch", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [-120, 80],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_OS_SECRET", "name": "Content Venture OS API" } }
+    },
+    {
+      "parameters": { "method": "POST", "url": "https://REPLACE-WITH-OS-URL.example/api/n8n/results", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ capability: 'funnel.publish_approved_revision', status: 'succeeded', idempotencyKey: $('Publish Webhook').item.json.body.idempotencyKey, externalExecutionId: $execution.id, evidence: { recommendationId: $json.id, appliedAt: $json.appliedAt } }) }}", "options": {} },
+      "id": "c46d4082-e426-4fc6-a45b-620e3161c0f4", "name": "Return Publish Receipt", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [180, 80],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_OS_SECRET", "name": "Content Venture OS API" } }
+    }
+  ],
+  "connections": { "Publish Webhook": { "main": [[{ "node": "Apply Exact Approved Patch", "type": "main", "index": 0 }]] }, "Apply Exact Approved Patch": { "main": [[{ "node": "Return Publish Receipt", "type": "main", "index": 0 }]] } },
+  "active": false, "settings": { "executionOrder": "v1" }, "versionId": "f0267839-3e89-49a6-8041-cd9be4370225", "meta": { "templateCredsSetupCompleted": false }, "tags": []
+}

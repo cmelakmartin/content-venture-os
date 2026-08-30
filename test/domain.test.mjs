@@ -1,0 +1,48 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { initialState, createRun, decideApproval, validateExecution, completeExecution, completeOnboarding, registerProduct } from "../src/domain.mjs";
+
+test("onboarding branches to product analysis or autonomous discovery", () => {
+  const discovery = initialState();
+  const discoveryRun = completeOnboarding(discovery, { path: "discover_for_me" });
+  assert.equal(discovery.onboarding.completed, true);
+  assert.ok(discoveryRun.specialists.includes("Trend Scout"));
+  assert.equal(discovery.reviewQueue.length, 3);
+
+  const existing = initialState();
+  assert.throws(() => completeOnboarding(existing, { path: "existing_product" }), /Upload/);
+  registerProduct(existing, { originalName: "my-product.pdf" });
+  const productRun = completeOnboarding(existing, { path: "existing_product" });
+  assert.ok(productRun.specialists.includes("Product Analyst"));
+});
+
+test("a run stops at an exact-version approval gate", () => {
+  const state = initialState();
+  const run = createRun(state);
+  assert.equal(run.status, "awaiting_approval");
+  assert.equal(run.action.status, "pending_approval");
+  assert.equal(run.action.constraints.maxCost, 1);
+});
+
+test("a mismatched artifact version cannot be approved", () => {
+  const state = initialState();
+  const run = createRun(state);
+  assert.throws(() => decideApproval(state, run.id, "approved", "2"), /version does not match/);
+});
+
+test("execution requires approval and enforces the cost ceiling", () => {
+  const state = initialState();
+  const run = createRun(state);
+  assert.throws(() => validateExecution(state, run.id, 0), /approval is required/);
+  decideApproval(state, run.id, "approved", "1");
+  assert.throws(() => validateExecution(state, run.id, 1.01), /exceeds the approved ceiling/);
+  assert.equal(validateExecution(state, run.id, 0.02).replay, false);
+});
+
+test("completed actions are idempotent", () => {
+  const state = initialState();
+  const run = createRun(state);
+  decideApproval(state, run.id, "approved", "1");
+  completeExecution(state, run.id, { status: "succeeded", idempotencyKey: run.action.idempotencyKey, cost: { amount: 0, currency: "EUR" }, outputArtifacts: [] });
+  assert.equal(validateExecution(state, run.id, 0).replay, true);
+});

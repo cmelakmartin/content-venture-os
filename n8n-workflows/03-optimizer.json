@@ -1,0 +1,26 @@
+{
+  "name": "Content Venture OS - Evidence Optimizer",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "content-venture-optimize", "authentication": "headerAuth", "responseMode": "onReceived", "options": {} },
+      "id": "79f60915-c57d-4c52-9558-4a1654e875fd", "name": "Optimizer Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [-500, 0],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_OS_SECRET", "name": "Content Venture OS API" } }, "webhookId": "content-venture-optimize"
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "days", "daysInterval": 1, "triggerAtHour": 6 }] } },
+      "id": "9a9a5876-a65b-4894-99bc-25a566f3c729", "name": "Daily Schedule", "type": "n8n-nodes-base.scheduleTrigger", "typeVersion": 1.2, "position": [-500, 180]
+    },
+    {
+      "parameters": { "method": "POST", "url": "https://REPLACE-WITH-OS-URL.example/api/n8n/actions/compute-optimization", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify($json.body || { trigger: 'daily_schedule' }) }}", "options": {} },
+      "id": "3a287f08-6225-487f-8fab-242359b0ad5a", "name": "Compute Evidence Proposal", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [-180, 80],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_OS_SECRET", "name": "Content Venture OS API" } }
+    },
+    {
+      "parameters": { "method": "POST", "url": "https://REPLACE-WITH-OS-URL.example/api/n8n/results", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ capability: 'venture.optimize', status: 'succeeded', idempotencyKey: 'recommendation-' + $json.id, externalExecutionId: $execution.id, evidence: { recommendationId: $json.id } }) }}", "options": {} },
+      "id": "6cf1403c-6698-458b-af6f-b355959ce3a1", "name": "Return Optimizer Receipt", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [120, 80],
+      "credentials": { "httpHeaderAuth": { "id": "CONFIGURE_OS_SECRET", "name": "Content Venture OS API" } }
+    }
+  ],
+  "connections": { "Optimizer Webhook": { "main": [[{ "node": "Compute Evidence Proposal", "type": "main", "index": 0 }]] }, "Daily Schedule": { "main": [[{ "node": "Compute Evidence Proposal", "type": "main", "index": 0 }]] }, "Compute Evidence Proposal": { "main": [[{ "node": "Return Optimizer Receipt", "type": "main", "index": 0 }]] } },
+  "active": false, "settings": { "executionOrder": "v1", "timezone": "Europe/Prague" }, "versionId": "6a2ecb2a-31cc-4e72-ae92-f1cd3fc965da", "meta": { "templateCredsSetupCompleted": false }, "tags": []
+}
