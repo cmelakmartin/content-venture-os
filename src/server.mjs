@@ -479,9 +479,14 @@ const server = http.createServer(async (req, res) => {
         await runtime.event(state.venture.id, "ads.draft_created", "meta", { packageId: adPackage.id, campaignId: adPackage.receipt.campaignId, adSetId: adPackage.receipt.adSetId, adIds: adPackage.receipt.ads.map((item) => item.adId), externalStatus: "PAUSED" });
         return json(res, 201, adPackage);
       } catch (error) {
-        adPackage.error = { message: error.message, at: new Date().toISOString(), safeToRetry: false };
+        const validationFailure = error.meta?.step === "campaign validation";
+        adPackage.error = { message: error.message, meta: error.meta || null, at: new Date().toISOString(), safeToRetry: validationFailure };
+        if (validationFailure) {
+          adPackage.status = "awaiting_approval";
+          adPackage.approval = null;
+        }
         await persist();
-        await runtime.event(state.venture.id, "ads.draft_failed", "meta", { packageId: adPackage.id, error: error.message, manualReviewRequired: true });
+        await runtime.event(state.venture.id, "ads.draft_failed", "meta", { packageId: adPackage.id, error: error.message, meta: error.meta || null, manualReviewRequired: !validationFailure });
         throw error;
       }
     }
@@ -498,7 +503,10 @@ const server = http.createServer(async (req, res) => {
     }
     match = url.pathname.match(/^\/api\/runs\/([^/]+)\/approval$/);
     if (req.method === "POST" && match) {
-      const input = await body(req); const run = decideApproval(state, match[1], input.decision, input.version); await persist(); return json(res, 200, run);
+      const input = await body(req);
+      const existing = state.runs.find((candidate) => candidate.id === match[1]);
+      if (input.decision === "approved" && ["ready_to_execute", "completed"].includes(existing?.status) && existing.action?.approval?.approvedVersion === String(input.version)) return json(res, 200, { ...existing, replay: true });
+      const run = decideApproval(state, match[1], input.decision, input.version); await persist(); return json(res, 200, run);
     }
     match = url.pathname.match(/^\/api\/runs\/([^/]+)\/execute$/);
     if (req.method === "POST" && match) {

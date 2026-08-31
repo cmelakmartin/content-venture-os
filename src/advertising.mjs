@@ -57,6 +57,24 @@ function envValue(env, name) {
   return value;
 }
 
+function metaApiError(step, response, result) {
+  const source = result?.error || {};
+  const detail = source.error_user_msg || source.error_user_title || source.message || `Meta returned HTTP ${response.status}.`;
+  const identifiers = [source.code != null ? `code ${source.code}` : "", source.error_subcode != null ? `subcode ${source.error_subcode}` : ""].filter(Boolean).join(", ");
+  const error = new Error(`Meta ${step} failed: ${detail}${identifiers ? ` (${identifiers})` : ""}.`);
+  error.meta = {
+    step,
+    httpStatus: response.status,
+    type: source.type || null,
+    code: source.code ?? null,
+    subcode: source.error_subcode ?? null,
+    userTitle: source.error_user_title || null,
+    userMessage: source.error_user_msg || null,
+    traceId: source.fbtrace_id || null
+  };
+  return error;
+}
+
 export async function createPausedMetaDraft(adPackage, imageBytes, options = {}) {
   if (adPackage?.status !== "approved_for_paused_draft" || adPackage.approval?.approvedVersion !== adPackage.version) throw new Error("Exact-version owner approval is required before creating a Meta draft.");
   if (!adPackage.guardrails?.createPausedOnly) throw new Error("The Meta adapter accepts PAUSED draft creation only.");
@@ -73,18 +91,20 @@ export async function createPausedMetaDraft(adPackage, imageBytes, options = {})
   const pixelId = envValue(env, "META_PIXEL_ID");
   const apiVersion = String(env.META_API_VERSION || "v25.0");
   const endpoint = `https://graph.facebook.com/${apiVersion}`;
-  const call = async (path, values) => {
+  const call = async (step, path, values, expected = "id") => {
     const form = new URLSearchParams({ ...values, access_token: token });
     const response = await fetchImpl(`${endpoint}/${path}`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: form });
     const result = await response.json();
-    if (!response.ok || !result.id) throw new Error(result.error?.message || `Meta returned ${response.status}.`);
-    return result.id;
+    if (!response.ok || (expected === "id" ? !result.id : result.success !== true)) throw metaApiError(step, response, result);
+    return expected === "id" ? result.id : result;
   };
   const startedAt = new Date().toISOString();
-  const campaignId = await call(`act_${account}/campaigns`, { name: adPackage.name, objective: adPackage.objective, status: "PAUSED", special_ad_categories: "[]" });
+  const campaignValues = { name: adPackage.name, objective: adPackage.objective, buying_type: "AUCTION", status: "PAUSED", special_ad_categories: "[]" };
+  await call("campaign validation", `act_${account}/campaigns`, { ...campaignValues, execution_options: JSON.stringify(["validate_only"]) }, "success");
+  const campaignId = await call("campaign creation", `act_${account}/campaigns`, campaignValues);
   const start = new Date(Date.now() + 10 * 60_000);
   const end = new Date(start.getTime() + adPackage.budget.durationDays * 86_400_000);
-  const adSetId = await call(`act_${account}/adsets`, {
+  const adSetId = await call("ad set creation", `act_${account}/adsets`, {
     name: `${adPackage.name} · ${adPackage.targeting.countries.join("+")}`, campaign_id: campaignId,
     lifetime_budget: String(Math.round(adPackage.budget.lifetime * 100)), start_time: start.toISOString(), end_time: end.toISOString(),
     billing_event: "IMPRESSIONS", optimization_goal: "OFFSITE_CONVERSIONS", bid_strategy: "LOWEST_COST_WITHOUT_CAP", destination_type: "WEBSITE",
@@ -97,14 +117,14 @@ export async function createPausedMetaDraft(adPackage, imageBytes, options = {})
   });
   const upload = await uploadResponse.json();
   const imageHash = Object.values(upload.images || {})[0]?.hash;
-  if (!uploadResponse.ok || !imageHash) throw new Error(upload.error?.message || `Meta image upload returned ${uploadResponse.status}.`);
+  if (!uploadResponse.ok || !imageHash) throw metaApiError("image upload", uploadResponse, upload);
   const ads = [];
   for (const variant of adPackage.variants) {
-    const creativeId = await call(`act_${account}/adcreatives`, {
+    const creativeId = await call(`${variant.angle} creative creation`, `act_${account}/adcreatives`, {
       name: `${adPackage.name} · ${variant.angle}`,
       object_story_spec: JSON.stringify({ page_id: pageId, link_data: { image_hash: imageHash, link: adPackage.landingUrl, message: variant.primaryText, name: variant.headline, description: variant.description, call_to_action: { type: "LEARN_MORE", value: { link: adPackage.landingUrl } } } })
     });
-    const adId = await call(`act_${account}/ads`, { name: `${adPackage.name} · ${variant.angle}`, adset_id: adSetId, creative: JSON.stringify({ creative_id: creativeId }), status: "PAUSED" });
+    const adId = await call(`${variant.angle} ad creation`, `act_${account}/ads`, { name: `${adPackage.name} · ${variant.angle}`, adset_id: adSetId, creative: JSON.stringify({ creative_id: creativeId }), status: "PAUSED" });
     ads.push({ angle: variant.angle, creativeId, adId, status: "PAUSED" });
   }
   return { status: "succeeded", capability: "ads.create_draft_campaign", provider: "meta", campaignId, adSetId, ads, imageHash, externalStatus: "PAUSED", startedAt, completedAt: new Date().toISOString(), cost: { amount: 0, currency: "EUR" } };
