@@ -4,6 +4,7 @@ import { initialState, createRun, decideApproval, validateExecution, completeExe
 
 test("onboarding branches to product analysis or autonomous discovery", () => {
   const discovery = initialState();
+  assert.equal(discovery.onboarding.runtimeStatus, "idle");
   const discoveryRun = completeOnboarding(discovery, { path: "discover_for_me" });
   assert.equal(discovery.onboarding.completed, true);
   assert.ok(discoveryRun.specialists.includes("Trend Scout"));

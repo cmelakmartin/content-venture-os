@@ -19,6 +19,9 @@ export function initialState() {
       path: null,
       autopilot: true,
       product: null,
+      runtimeStatus: "idle",
+      runtimeRunId: null,
+      runtimeError: null,
       completedAt: null
     },
     venture: {

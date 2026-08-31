@@ -65,7 +65,10 @@ async function dispatchCapability(pathname, capability, payload, idempotencyKey)
 async function loadState() {
   try {
     const parsed = JSON.parse(await fs.readFile(stateFile, "utf8"));
-    parsed.onboarding ||= { completed: false, path: null, autopilot: true, product: null, completedAt: null };
+    parsed.onboarding ||= { completed: false, path: null, autopilot: true, product: null, runtimeStatus: "idle", runtimeRunId: null, runtimeError: null, completedAt: null };
+    parsed.onboarding.runtimeStatus ||= parsed.onboarding.completed ? "completed" : "idle";
+    parsed.onboarding.runtimeRunId ||= null;
+    parsed.onboarding.runtimeError ||= null;
     parsed.advertising ||= { packages: [] };
     parsed.reviewQueue ||= [];
     return parsed;
@@ -187,6 +190,46 @@ async function activateVentureRuntime(pathChoice, run) {
   await runtime.event(ventureId, "funnel.published", "funnel_renderer", { slug, version: funnel.version });
   await persist();
   return funnel;
+}
+
+let activationTask = null;
+
+function queueVentureActivation(pathChoice, runId) {
+  if (activationTask) return;
+  activationTask = (async () => {
+    try {
+      const run = state.runs.find((candidate) => candidate.id === runId);
+      if (!run) throw new Error("The queued onboarding run is unavailable.");
+      if (state.onboarding.runtimeStatus === "running") {
+        const recovered = await runtime.snapshot(state.venture.id);
+        if (recovered.funnel?.status === "live") {
+          state.onboarding.runtimeStatus = "completed";
+          state.onboarding.runtimeCompletedAt = new Date().toISOString();
+          state.onboarding.runtimeError = null;
+          await persist();
+          return;
+        }
+      }
+      state.onboarding.runtimeStatus = "running";
+      state.onboarding.runtimeError = null;
+      await persist();
+      await runtime.event(state.venture.id, "onboarding.runtime_started", "background_runner", { runId, path: pathChoice });
+      const funnel = await activateVentureRuntime(pathChoice, run);
+      state.onboarding.runtimeStatus = "completed";
+      state.onboarding.runtimeCompletedAt = new Date().toISOString();
+      state.onboarding.runtimeError = null;
+      await persist();
+      await runtime.event(state.venture.id, "onboarding.runtime_completed", "background_runner", { runId, slug: funnel.slug, version: funnel.version });
+    } catch (error) {
+      state.onboarding.runtimeStatus = "needs_attention";
+      state.onboarding.runtimeError = { message: error.message, at: new Date().toISOString() };
+      try { await persist(); } catch (persistError) { console.error("Background onboarding state:", persistError); }
+      try { await runtime.event(state.venture.id, "onboarding.runtime_failed", "background_runner", { runId, error: error.message }); } catch (eventError) { console.error("Background onboarding event:", eventError); }
+      console.error("Background onboarding:", error);
+    } finally {
+      activationTask = null;
+    }
+  })();
 }
 
 function defaultFunnelContent() {
@@ -391,9 +434,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "POST" && url.pathname === "/api/onboarding") {
       const input = await body(req);
-      const run = completeOnboarding(state, input); await persist();
-      const funnel = await activateVentureRuntime(input.path, run);
-      return json(res, 201, { ...run, funnel: { slug: funnel.slug, version: funnel.version, status: funnel.status } });
+      const run = completeOnboarding(state, input);
+      state.onboarding.runtimeStatus = "queued";
+      state.onboarding.runtimeRunId = run.id;
+      state.onboarding.runtimeError = null;
+      await persist();
+      queueVentureActivation(input.path, run.id);
+      return json(res, 202, { accepted: true, runId: run.id, runtimeStatus: "queued" });
     }
     if (req.method === "POST" && url.pathname === "/api/venture") {
       updateVenture(state, await body(req)); await persist(); return json(res, 200, state);
@@ -504,4 +551,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(port, "0.0.0.0", () => console.log(`Content Venture OS listening on http://0.0.0.0:${port}`));
+server.listen(port, "0.0.0.0", () => {
+  console.log(`Content Venture OS listening on http://0.0.0.0:${port}`);
+  if (["queued", "running"].includes(state.onboarding?.runtimeStatus) && state.onboarding.runtimeRunId) queueVentureActivation(state.onboarding.path, state.onboarding.runtimeRunId);
+});
