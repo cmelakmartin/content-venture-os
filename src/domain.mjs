@@ -43,6 +43,7 @@ export function initialState() {
       ads: { status: "manual", mode: "approval_gated" }
     },
     runs: [],
+    advertising: { packages: [] },
     reviewQueue: [],
     audit: [{ at: new Date().toISOString(), event: "workspace.seeded", actor: "system" }]
   };

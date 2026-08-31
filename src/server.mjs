@@ -12,6 +12,7 @@ import { dispatchN8n, n8nConfigured, requireN8nAuthorization } from "./n8n-clien
 import { createBusinessActions } from "./business-actions.mjs";
 import { createOwnerAuth, requiresOwnerSession } from "./owner-auth.mjs";
 import { createLeadMagnetPdf, createLeadMagnetToken, verifyLeadMagnetToken } from "./lead-magnet.mjs";
+import { approveAdPackage, createAdPackage, createPausedMetaDraft, metaAdsConfigured } from "./advertising.mjs";
 
 const port = Number(process.env.PORT || 3000);
 const dataDir = path.resolve(process.env.DATA_DIR || "./data");
@@ -46,7 +47,7 @@ function refreshConnections() {
     mode: hasLiveCheckout ? "live_payment_link" : "test_links_only"
   };
   state.connections.email = { status: process.env.RESEND_API_KEY && process.env.RESEND_FROM ? "ready" : "needs_setup", mode: process.env.RESEND_API_KEY ? "resend" : "unavailable" };
-  state.connections.ads = { status: "not_implemented", mode: "unavailable" };
+  state.connections.ads = { status: metaAdsConfigured() ? (state.advertising?.connectionVerifiedAt ? "ready" : "configured_unverified") : "needs_setup", mode: "meta_paused_drafts" };
   state.connections.scheduler = { status: n8nConfigured() ? "delegated" : "disabled", mode: "n8n_schedule" };
 }
 
@@ -65,6 +66,7 @@ async function loadState() {
   try {
     const parsed = JSON.parse(await fs.readFile(stateFile, "utf8"));
     parsed.onboarding ||= { completed: false, path: null, autopilot: true, product: null, completedAt: null };
+    parsed.advertising ||= { packages: [] };
     parsed.reviewQueue ||= [];
     return parsed;
   } catch (error) {
@@ -142,6 +144,10 @@ function receipt({ run, artifactId, filename, startedAt, provider, operationId, 
     startedAt, completedAt: new Date().toISOString(), cost: { amount: cost, currency: "EUR", estimated: provider !== "mock" },
     outputArtifacts: [{ artifactId, version: "1", contentType: filename.endsWith(".png") ? "image/png" : "image/svg+xml", dimensions: "1024x1024", visibility: "private", storedUri: `/api/assets/${filename}`, provenance: { model, promptArtifactId: run.action.subject.artifactId, promptArtifactVersion: run.action.subject.version } }]
   };
+}
+
+function latestImageArtifact() {
+  return state.runs.flatMap((run) => run.receipt?.outputArtifacts || []).find((artifact) => artifact.contentType?.startsWith("image/")) || null;
 }
 
 async function activateVentureRuntime(pathChoice, run) {
@@ -391,6 +397,43 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "POST" && url.pathname === "/api/venture") {
       updateVenture(state, await body(req)); await persist(); return json(res, 200, state);
+    }
+    if (req.method === "POST" && url.pathname === "/api/ads/packages") {
+      const funnel = await runtime.snapshot(state.venture.id).then((snapshot) => snapshot.funnel);
+      const artifact = latestImageArtifact();
+      const input = await body(req);
+      const adPackage = createAdPackage({ venture: state.venture, funnel, artifact, input, baseUrl: publicUrl(req, "") });
+      state.advertising.packages.unshift(adPackage);
+      await persist();
+      await runtime.event(state.venture.id, "ads.package_prepared", "ad_planner", { packageId: adPackage.id, version: adPackage.version, budget: adPackage.budget, targeting: adPackage.targeting });
+      return json(res, 201, adPackage);
+    }
+    match = url.pathname.match(/^\/api\/ads\/packages\/([a-f0-9-]+)\/approve-draft$/);
+    if (req.method === "POST" && match) {
+      const input = await body(req);
+      const adPackage = state.advertising.packages.find((candidate) => candidate.id === match[1]);
+      if (!adPackage) return json(res, 404, { error: "Ad package not found." });
+      if (adPackage.status === "draft_created" && adPackage.receipt?.status === "succeeded") return json(res, 200, { ...adPackage, replay: true });
+      if (adPackage.status === "awaiting_approval") approveAdPackage(adPackage, input.version);
+      if (adPackage.status !== "approved_for_paused_draft" || adPackage.approval?.approvedVersion !== String(input.version)) throw new Error("Exact-version approval is required for this Meta draft.");
+      await persist();
+      await runtime.event(state.venture.id, "ads.package_approved", "owner", { packageId: adPackage.id, version: adPackage.version, scope: adPackage.approval.scope, budget: adPackage.budget });
+      if (!metaAdsConfigured()) throw new Error("Connect Meta Ads before creating the approved paused draft.");
+      const filename = path.basename(adPackage.asset.storedUri);
+      if (adPackage.asset.storedUri !== `/api/assets/${filename}`) throw new Error("Unsafe ad creative path.");
+      try {
+        adPackage.receipt = await createPausedMetaDraft(adPackage, await fs.readFile(path.join(assetsDir, filename)));
+        adPackage.status = "draft_created";
+        state.advertising.connectionVerifiedAt = new Date().toISOString();
+        await persist();
+        await runtime.event(state.venture.id, "ads.draft_created", "meta", { packageId: adPackage.id, campaignId: adPackage.receipt.campaignId, adSetId: adPackage.receipt.adSetId, adIds: adPackage.receipt.ads.map((item) => item.adId), externalStatus: "PAUSED" });
+        return json(res, 201, adPackage);
+      } catch (error) {
+        adPackage.error = { message: error.message, at: new Date().toISOString(), safeToRetry: false };
+        await persist();
+        await runtime.event(state.venture.id, "ads.draft_failed", "meta", { packageId: adPackage.id, error: error.message, manualReviewRequired: true });
+        throw error;
+      }
     }
     match = url.pathname.match(/^\/api\/recommendations\/([a-f0-9-]+)\/approve$/);
     if (req.method === "POST" && match) {

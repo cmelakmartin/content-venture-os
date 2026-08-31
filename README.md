@@ -21,6 +21,7 @@ n8n is deliberately not the source of truth. Every durable business object—lea
 - n8n capability dispatch with a scoped shared secret and idempotency key;
 - importable n8n workflows for welcome email, protected fulfillment, daily/manual optimization and approved funnel publishing;
 - signed, expiring product links with enforced download limits;
+- supervised Meta campaign packages and native PAUSED-draft creation;
 - an optimizer that proposes an exact headline/subheadline patch;
 - owner approval before the patch is applied to the live funnel;
 - normalized execution receipts returned from n8n to the OS audit history;
@@ -126,6 +127,22 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 Send Stripe test events to `https://your-os.example/api/webhooks/stripe`. The OS verifies Stripe before dispatching the fulfillment capability to n8n.
+
+## Supervised Meta Ads draft
+
+The first advertising slice prepares three ad previews from the current funnel and approved PNG visual. The owner locks target countries, duration and EUR budget before execution. The native Meta adapter can create the campaign, ad set, image, creatives and ads, but every external object is created with `PAUSED` status. Activation and budget changes are deliberately not implemented yet.
+
+Configure these server-side values:
+
+```dotenv
+META_ACCESS_TOKEN=...
+META_AD_ACCOUNT_ID=act_...
+META_PAGE_ID=...
+META_PIXEL_ID=...
+META_API_VERSION=v25.0
+```
+
+For this owner-operated PoC, use an access token authorized for the selected ad account. A customer product must replace environment-provided tokens with OAuth, encrypted credential storage and revocation. Generate a real PNG through the image connector before creating the Meta draft; deterministic SVG mock assets remain preview-only.
 
 ## Execution lifecycle
 
