@@ -62,17 +62,32 @@ test("Meta adapter creates only PAUSED objects and returns their evidence", asyn
   const receipt = await createPausedMetaDraft(item, Buffer.from("png-bytes"), { env, fetchImpl });
   assert.equal(receipt.externalStatus, "PAUSED");
   assert.equal(receipt.ads.length, 3);
-  assert.equal(calls.length, 10);
+  assert.equal(calls.length, 13);
   assert.equal(calls[0].body.execution_options, '["validate_only"]');
   assert.equal(calls[0].body.is_adset_budget_sharing_enabled, "false");
-  assert.equal(calls[1].body.status, "PAUSED");
-  assert.equal(calls[1].body.is_adset_budget_sharing_enabled, "false");
-  assert.equal(calls[2].body.status, "PAUSED");
-  assert.equal(calls[2].body.lifetime_budget, "7000");
-  assert.equal(calls[2].body.dsa_beneficiary, "Primebridge Digital");
-  assert.equal(calls[2].body.dsa_payor, "Martin Example");
+  assert.equal(calls.slice(2, 5).every((call) => call.body.execution_options === '["validate_only"]'), true);
+  assert.equal(calls[5].body.status, "PAUSED");
+  assert.equal(calls[5].body.is_adset_budget_sharing_enabled, "false");
+  assert.equal(calls[6].body.status, "PAUSED");
+  assert.equal(calls[6].body.lifetime_budget, "7000");
+  assert.equal(calls[6].body.dsa_beneficiary, "Primebridge Digital");
+  assert.equal(calls[6].body.dsa_payor, "Martin Example");
   assert.equal(calls.filter((call) => call.url.endsWith("/ads")).every((call) => call.body.status === "PAUSED"), true);
   assert.equal(calls.some((call) => Object.values(call.body).includes("ACTIVE")), false);
+});
+
+test("creative eligibility is validated before campaign and ad set creation", async () => {
+  const item = fixture(); approveAdPackage(item, "1"); const calls = [];
+  const fetchImpl = async (url, options) => {
+    const body = Object.fromEntries(options.body.entries()); calls.push({ url, body });
+    if (url.endsWith("/adimages")) return { ok: true, status: 200, json: async () => ({ images: { approved: { hash: "image-hash" } } }) };
+    if (url.endsWith("/campaigns")) return { ok: true, status: 200, json: async () => ({ success: true }) };
+    return { ok: false, status: 400, json: async () => ({ error: { message: "App is in development mode", code: 100, error_subcode: 1885183 } }) };
+  };
+  const env = { META_ACCESS_TOKEN: "token", META_AD_ACCOUNT_ID: "act_123", META_PAGE_ID: "page", META_PIXEL_ID: "pixel", META_DSA_BENEFICIARY: "Business", META_DSA_PAYOR: "Business" };
+  await assert.rejects(() => createPausedMetaDraft(item, Buffer.from("png"), { env, fetchImpl }), /creative validation failed/);
+  assert.equal(calls.some((call) => call.url.endsWith("/adsets")), false);
+  assert.equal(calls.filter((call) => call.url.endsWith("/campaigns")).length, 1);
 });
 
 test("EU targeting requires explicit truthful DSA transparency names before contacting Meta", async () => {

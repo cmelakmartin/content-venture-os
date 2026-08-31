@@ -117,6 +117,18 @@ export async function createPausedMetaDraft(adPackage, imageBytes, options = {})
   const startedAt = new Date().toISOString();
   const campaignValues = { name: adPackage.name, objective: adPackage.objective, buying_type: "AUCTION", status: "PAUSED", special_ad_categories: "[]", is_adset_budget_sharing_enabled: "false" };
   await call("campaign validation", `act_${account}/campaigns`, { ...campaignValues, execution_options: JSON.stringify(["validate_only"]) }, "success");
+  const creativeValues = (variant) => ({
+    name: `${adPackage.name} · ${variant.angle}`,
+    object_story_spec: JSON.stringify({ page_id: pageId, link_data: { image_hash: imageHash, link: adPackage.landingUrl, message: variant.primaryText, name: variant.headline, description: variant.description, call_to_action: { type: "LEARN_MORE", value: { link: adPackage.landingUrl } } } })
+  });
+  const uploadResponse = await fetchImpl(`${endpoint}/act_${account}/adimages`, {
+    method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ bytes: imageBytes.toString("base64"), access_token: token })
+  });
+  const upload = await uploadResponse.json();
+  const imageHash = Object.values(upload.images || {})[0]?.hash;
+  if (!uploadResponse.ok || !imageHash) throw metaApiError("image upload", uploadResponse, upload);
+  for (const variant of adPackage.variants) await call(`${variant.angle} creative validation`, `act_${account}/adcreatives`, { ...creativeValues(variant), execution_options: JSON.stringify(["validate_only"]) }, "success");
   const campaignId = await call("campaign creation", `act_${account}/campaigns`, campaignValues);
   const start = new Date(Date.now() + 10 * 60_000);
   const end = new Date(start.getTime() + adPackage.budget.durationDays * 86_400_000);
@@ -128,19 +140,9 @@ export async function createPausedMetaDraft(adPackage, imageBytes, options = {})
     ...(dsaBeneficiary ? { dsa_beneficiary: dsaBeneficiary } : {}), ...(dsaPayor ? { dsa_payor: dsaPayor } : {}),
     targeting: JSON.stringify({ geo_locations: { countries: adPackage.targeting.countries }, age_min: adPackage.targeting.ageMin, age_max: adPackage.targeting.ageMax }), status: "PAUSED"
   });
-  const uploadResponse = await fetchImpl(`${endpoint}/act_${account}/adimages`, {
-    method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ bytes: imageBytes.toString("base64"), access_token: token })
-  });
-  const upload = await uploadResponse.json();
-  const imageHash = Object.values(upload.images || {})[0]?.hash;
-  if (!uploadResponse.ok || !imageHash) throw metaApiError("image upload", uploadResponse, upload);
   const ads = [];
   for (const variant of adPackage.variants) {
-    const creativeId = await call(`${variant.angle} creative creation`, `act_${account}/adcreatives`, {
-      name: `${adPackage.name} · ${variant.angle}`,
-      object_story_spec: JSON.stringify({ page_id: pageId, link_data: { image_hash: imageHash, link: adPackage.landingUrl, message: variant.primaryText, name: variant.headline, description: variant.description, call_to_action: { type: "LEARN_MORE", value: { link: adPackage.landingUrl } } } })
-    });
+    const creativeId = await call(`${variant.angle} creative creation`, `act_${account}/adcreatives`, creativeValues(variant));
     const adId = await call(`${variant.angle} ad creation`, `act_${account}/ads`, { name: `${adPackage.name} · ${variant.angle}`, adset_id: adSetId, creative: JSON.stringify({ creative_id: creativeId }), status: "PAUSED" });
     ads.push({ angle: variant.angle, creativeId, adId, status: "PAUSED" });
   }

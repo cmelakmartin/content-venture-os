@@ -480,7 +480,7 @@ const server = http.createServer(async (req, res) => {
         await runtime.event(state.venture.id, "ads.draft_created", "meta", { packageId: adPackage.id, campaignId: adPackage.receipt.campaignId, adSetId: adPackage.receipt.adSetId, adIds: adPackage.receipt.ads.map((item) => item.adId), externalStatus: "PAUSED" });
         return json(res, 201, adPackage);
       } catch (error) {
-        const validationFailure = ["campaign validation", "local DSA validation"].includes(error.meta?.step);
+        const validationFailure = ["campaign validation", "local DSA validation"].includes(error.meta?.step) || String(error.meta?.step || "").endsWith("creative validation");
         adPackage.error = { message: error.message, meta: error.meta || null, at: new Date().toISOString(), safeToRetry: validationFailure };
         if (validationFailure) {
           adPackage.status = "awaiting_approval";
