@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { approveAdPackage, createAdPackage, createPausedMetaDraft, metaAdsConfigured } from "../src/advertising.mjs";
+import { approveAdPackage, createAdPackage, createPausedMetaDraft, metaAdsConfiguration, metaAdsConfigured } from "../src/advertising.mjs";
 
 function fixture() {
   return createAdPackage({
@@ -29,6 +29,14 @@ test("Meta execution requires the exact approved package version", async () => {
   assert.equal(item.approval.scope, "create_paused_meta_objects");
   item.landingUrl = "http://localhost/v/workflow-guide";
   await assert.rejects(() => createPausedMetaDraft(item, Buffer.from("image"), { env: {} }), /HTTPS/);
+});
+
+test("Meta configuration reports only safe field presence", () => {
+  const result = metaAdsConfiguration({ META_ACCESS_TOKEN: "secret", META_AD_ACCOUNT_ID: "act_123" });
+  assert.equal(result.configured, false);
+  assert.deepEqual(result.missing, ["META_PAGE_ID", "META_PIXEL_ID"]);
+  assert.equal(result.fields.META_ACCESS_TOKEN, true);
+  assert.equal(JSON.stringify(result).includes("secret"), false);
 });
 
 test("Meta adapter creates only PAUSED objects and returns their evidence", async () => {

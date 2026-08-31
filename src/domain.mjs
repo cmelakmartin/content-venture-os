@@ -19,6 +19,8 @@ export function initialState() {
       path: null,
       autopilot: true,
       product: null,
+      products: [],
+      activeProductId: null,
       runtimeStatus: "idle",
       runtimeRunId: null,
       runtimeError: null,
@@ -148,8 +150,21 @@ export function completeOnboarding(state, input) {
 }
 
 export function registerProduct(state, product) {
+  state.onboarding.products ||= state.onboarding.product ? [state.onboarding.product] : [];
+  state.onboarding.products = [product, ...state.onboarding.products.filter((candidate) => candidate.id !== product.id)];
   state.onboarding.product = product;
+  state.onboarding.activeProductId = product.id;
   state.audit.unshift({ at: new Date().toISOString(), event: "product.uploaded", actor: "owner", filename: product.originalName });
+  return product;
+}
+
+export function activateProduct(state, productId) {
+  state.onboarding.products ||= state.onboarding.product ? [state.onboarding.product] : [];
+  const product = state.onboarding.products.find((candidate) => candidate.id === productId);
+  if (!product) throw new Error("Product not found.");
+  state.onboarding.product = product;
+  state.onboarding.activeProductId = product.id;
+  state.audit.unshift({ at: new Date().toISOString(), event: "product.activated", actor: "owner", filename: product.originalName });
   return product;
 }
 

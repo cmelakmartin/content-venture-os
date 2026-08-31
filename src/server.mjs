@@ -2,7 +2,7 @@ import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
-import { initialState, createRun, decideApproval, validateExecution, completeExecution, updateVenture, completeOnboarding, registerProduct } from "./domain.mjs";
+import { initialState, createRun, decideApproval, validateExecution, completeExecution, updateVenture, completeOnboarding, registerProduct, activateProduct } from "./domain.mjs";
 import { createRuntimeStore } from "./runtime-store.mjs";
 import { extractProduct } from "./product-ingestion.mjs";
 import { agentModelLabel, agentProviderName, agentRuntimeConfigured, analyzeProductWithAgents, cleanAgentText } from "./agent-runtime.mjs";
@@ -12,7 +12,8 @@ import { dispatchN8n, n8nConfigured, requireN8nAuthorization } from "./n8n-clien
 import { createBusinessActions } from "./business-actions.mjs";
 import { createOwnerAuth, requiresOwnerSession } from "./owner-auth.mjs";
 import { createLeadMagnetPdf, createLeadMagnetToken, verifyLeadMagnetToken } from "./lead-magnet.mjs";
-import { approveAdPackage, createAdPackage, createPausedMetaDraft, metaAdsConfigured } from "./advertising.mjs";
+import { approveAdPackage, createAdPackage, createPausedMetaDraft, metaAdsConfiguration, metaAdsConfigured } from "./advertising.mjs";
+import { createProductUploadStore } from "./product-upload.mjs";
 
 const port = Number(process.env.PORT || 3000);
 const dataDir = path.resolve(process.env.DATA_DIR || "./data");
@@ -24,6 +25,7 @@ const ownerAuth = createOwnerAuth();
 
 await fs.mkdir(assetsDir, { recursive: true });
 await fs.mkdir(uploadsDir, { recursive: true });
+const productUploads = await createProductUploadStore(dataDir);
 let state = await loadState();
 const ventureDefaults = initialState().venture;
 state.venture.audience = cleanAgentText(state.venture.audience, ventureDefaults.audience);
@@ -47,7 +49,8 @@ function refreshConnections() {
     mode: hasLiveCheckout ? "live_payment_link" : "test_links_only"
   };
   state.connections.email = { status: process.env.RESEND_API_KEY && process.env.RESEND_FROM ? "ready" : "needs_setup", mode: process.env.RESEND_API_KEY ? "resend" : "unavailable" };
-  state.connections.ads = { status: metaAdsConfigured() ? (state.advertising?.connectionVerifiedAt ? "ready" : "configured_unverified") : "needs_setup", mode: "meta_paused_drafts" };
+  const meta = metaAdsConfiguration();
+  state.connections.ads = { status: meta.configured ? (state.advertising?.connectionVerifiedAt ? "ready" : "configured_unverified") : "needs_setup", mode: "meta_paused_drafts", setup: { present: meta.fields, missing: meta.missing } };
   state.connections.scheduler = { status: n8nConfigured() ? "delegated" : "disabled", mode: "n8n_schedule" };
 }
 
@@ -69,6 +72,8 @@ async function loadState() {
     parsed.onboarding.runtimeStatus ||= parsed.onboarding.completed ? "completed" : "idle";
     parsed.onboarding.runtimeRunId ||= null;
     parsed.onboarding.runtimeError ||= null;
+    parsed.onboarding.products ||= parsed.onboarding.product ? [parsed.onboarding.product] : [];
+    parsed.onboarding.activeProductId ||= parsed.onboarding.product?.id || null;
     parsed.advertising ||= { packages: [] };
     parsed.reviewQueue ||= [];
     return parsed;
@@ -418,19 +423,17 @@ const server = http.createServer(async (req, res) => {
       await runtime.event(state.venture.id, `execution.${result.status}`, "n8n", { capability: String(result.capability), idempotencyKey: String(result.idempotencyKey), externalExecutionId: result.externalExecutionId || null, evidence: result.evidence || null, error: result.error || null });
       return json(res, 202, { recorded: true });
     }
-    if (req.method === "POST" && url.pathname === "/api/product-upload") {
-      const input = await body(req, 12_000_000);
-      if (!input.name || !input.data) throw new Error("Choose a product or source package to upload.");
-      const allowed = new Set(["pdf", "docx", "txt", "md"]);
-      const extension = String(input.name).split(".").pop().toLowerCase();
-      if (!allowed.has(extension)) throw new Error("Use a PDF, DOCX, TXT or Markdown file for this runtime slice.");
-      const bytes = Buffer.from(String(input.data).replace(/^data:[^,]+,/, ""), "base64");
-      if (!bytes.length || bytes.length > 8_000_000) throw new Error("The upload must be between 1 byte and 8 MB.");
-      const id = crypto.randomUUID();
-      const storedName = `${id}.${extension}`;
-      await fs.writeFile(path.join(uploadsDir, storedName), bytes, { mode: 0o600 });
-      const product = registerProduct(state, { id, originalName: path.basename(String(input.name)), storedName, bytes: bytes.length, uploadedAt: new Date().toISOString() });
+    if (req.method === "POST" && url.pathname === "/api/product-uploads") return json(res, 201, await productUploads.start(await body(req)));
+    match = url.pathname.match(/^\/api\/product-uploads\/([a-f0-9-]{36})\/chunks$/);
+    if (req.method === "POST" && match) return json(res, 200, await productUploads.append(match[1], await body(req, 800_000)));
+    match = url.pathname.match(/^\/api\/product-uploads\/([a-f0-9-]{36})\/complete$/);
+    if (req.method === "POST" && match) {
+      const product = registerProduct(state, await productUploads.complete(match[1]));
       await persist(); return json(res, 201, product);
+    }
+    match = url.pathname.match(/^\/api\/products\/([a-f0-9-]{36})\/activate$/);
+    if (req.method === "POST" && match) {
+      const product = activateProduct(state, match[1]); await persist(); return json(res, 200, product);
     }
     if (req.method === "POST" && url.pathname === "/api/onboarding") {
       const input = await body(req);
@@ -533,8 +536,9 @@ const server = http.createServer(async (req, res) => {
       if (!entitlement) return json(res, 403, { error: "This delivery link is invalid, expired or has reached its download limit." });
       const storedName = path.basename(entitlement.productStoredName);
       if (storedName !== entitlement.productStoredName) throw new Error("Unsafe product path.");
-      const product = state.onboarding?.product;
-      if (!product || product.storedName !== storedName) return json(res, 404, { error: "Product file is unavailable." });
+      const products = state.onboarding?.products || (state.onboarding?.product ? [state.onboarding.product] : []);
+      const product = products.find((candidate) => candidate.storedName === storedName);
+      if (!product) return json(res, 404, { error: "Product file is unavailable." });
       await runtime.event(state.venture.id, "fulfillment.downloaded", "protected_delivery", { entitlementId: entitlement.id, downloadCount: entitlement.downloadCount });
       const bytes = await fs.readFile(path.join(uploadsDir, storedName));
       res.writeHead(200, { "content-type": "application/octet-stream", "content-disposition": `attachment; filename="${String(product.originalName || "product").replace(/["\r\n]/g, "")}"`, "cache-control": "private, no-store" });

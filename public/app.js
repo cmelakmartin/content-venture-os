@@ -44,10 +44,11 @@ function render() {
   document.body.classList.remove("onboarding-mode");
   const current = page();
   document.querySelectorAll("nav a").forEach((item) => item.classList.toggle("active", item.dataset.page === current));
-  const names = { dashboard: "Autopilot", venture: "Business input", runs: "Work & evidence", connections: "Execution setup" };
+  const names = { dashboard: "Autopilot", products: "Products", venture: "Business input", runs: "Work & evidence", connections: "Execution setup" };
   title.textContent = names[current] || "Overview";
   app.setAttribute("aria-busy", "false");
   if (current === "venture") return renderVenture();
+  if (current === "products") return renderProducts();
   if (current === "runs") return renderRuns();
   if (current === "connections") return renderConnections();
   renderDashboard();
@@ -70,10 +71,9 @@ function renderUpload() {
     if (!file) return say("Choose a file first.", true);
     const button = event.submitter;
     button.disabled = true;
-    button.textContent = "Extracting and analyzing…";
+    button.textContent = "Uploading…";
     try {
-      const data = await readFile(file);
-      await api("/api/product-upload", { method: "POST", body: JSON.stringify({ name: file.name, data }) });
+      await uploadProduct(file, (progress) => { button.textContent = `Uploading ${progress}%…`; });
       await beginOnboarding("existing_product");
     } catch (error) {
       button.disabled = false;
@@ -83,12 +83,41 @@ function renderUpload() {
   };
 }
 
-function readFile(file) {
+function readBlob(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
+    reader.onload = () => resolve(String(reader.result).split(",")[1]);
     reader.onerror = () => reject(new Error("The file could not be read."));
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function uploadProduct(file, onProgress = () => {}) {
+  if (file.size < 1 || file.size > 8_000_000) throw new Error("The upload must be between 1 byte and 8 MB.");
+  const session = await api("/api/product-uploads", { method: "POST", body: JSON.stringify({ name: file.name, size: file.size }) });
+  const chunkSize = 384_000;
+  for (let offset = 0; offset < file.size; offset += chunkSize) {
+    const blob = file.slice(offset, Math.min(offset + chunkSize, file.size));
+    await api(`/api/product-uploads/${session.id}/chunks`, { method: "POST", body: JSON.stringify({ offset, data: await readBlob(blob) }) });
+    onProgress(Math.round(Math.min(offset + blob.size, file.size) / file.size * 100));
+  }
+  return api(`/api/product-uploads/${session.id}/complete`, { method: "POST", body: "{}" });
+}
+
+function renderProducts() {
+  const products = state.onboarding?.products || (state.onboarding?.product ? [state.onboarding.product] : []);
+  app.innerHTML = `<div class="grid two"><div class="card"><p class="eyebrow">Owner product library</p><h2>Add another digital product</h2><p class="muted">Uploads use small requests so the hosting proxy does not need to accept one large encoded document.</p><form id="product-library-upload"><label>PDF, DOCX, TXT or Markdown · up to 8 MB<input id="library-product-file" type="file" accept=".pdf,.docx,.txt,.md" required></label><button>Upload product</button></form></div><div class="card"><h2>${products.length} product${products.length === 1 ? "" : "s"}</h2><p class="muted">This PoC stores multiple products but operates one active venture and fulfillment product at a time.</p>${products.map((product) => `<div class="connection"><div><strong>${esc(product.originalName)}</strong><small>${Math.ceil(Number(product.bytes || 0) / 1024)} KB · ${product.id === state.onboarding.activeProductId ? "active for fulfillment" : "stored"}</small></div>${product.id === state.onboarding.activeProductId ? statusChip("ready") : `<button class="secondary" data-activate-product="${esc(product.id)}">Make active</button>`}</div>`).join("") || `<p class="muted">No uploaded products yet.</p>`}</div></div>`;
+  document.querySelector("#product-library-upload").onsubmit = async (event) => {
+    event.preventDefault(); const file = document.querySelector("#library-product-file").files[0]; const button = event.submitter;
+    if (!file) return say("Choose a file first.", true);
+    button.disabled = true;
+    try { await uploadProduct(file, (progress) => { button.textContent = `Uploading ${progress}%…`; }); await refresh("Product uploaded and selected for future fulfillment."); }
+    catch (error) { button.disabled = false; button.textContent = "Upload product"; say(error.message, true); }
+  };
+  document.querySelectorAll("[data-activate-product]").forEach((button) => button.onclick = async () => {
+    button.disabled = true;
+    try { await api(`/api/products/${button.dataset.activateProduct}/activate`, { method: "POST", body: "{}" }); await refresh("Active fulfillment product changed."); }
+    catch (error) { await refresh(); say(error.message, true); }
   });
 }
 
@@ -137,9 +166,10 @@ function renderDashboard() {
 
 function adPackageCard(item) {
   const connectorReady = ["ready", "configured_unverified"].includes(state.connections.ads?.status);
+  const missingMeta = state.connections.ads?.setup?.missing || [];
   const created = item.status === "draft_created";
   const executableImage = /^image\/(?:png|jpeg)$/.test(item.asset.contentType || "");
-  return `<div class="card" style="margin:18px 0"><div class="section-head compact"><div><p class="eyebrow">Meta campaign package · v${esc(item.version)}</p><h2>${created ? "PAUSED Meta draft created" : "Review before creating the draft"}</h2></div>${statusChip(item.status)}</div><p class="muted">${esc(item.objective)} · ${esc(item.targeting.countries.join(", "))} · €${Number(item.budget.daily).toFixed(2)}/day planning limit · €${Number(item.budget.lifetime).toFixed(2)} lifetime ceiling · ${item.budget.durationDays} days</p>${item.error ? `<div class="approval-box"><strong>Manual review required</strong><p class="muted">${esc(item.error.message)} A partial Meta draft may exist; inspect Ads Manager before preparing a new package.</p></div>` : ""}<div class="ad-preview-grid">${item.variants.map((variant) => `<article class="ad-preview"><img src="${esc(item.asset.storedUri)}" alt="Approved Meta creative"><small>${esc(variant.angle)} angle</small><h3>${esc(variant.headline)}</h3><p>${esc(variant.primaryText)}</p><strong>Learn more</strong></article>`).join("")}</div>${created ? `<div class="artifact"><small>Meta evidence</small><p><strong>Campaign:</strong> ${esc(item.receipt.campaignId)} · <strong>Ad set:</strong> ${esc(item.receipt.adSetId)} · <strong>Status:</strong> PAUSED</p><p class="muted">Activation remains unavailable until a separate spend approval capability is implemented.</p></div>` : `<div class="approval-box"><h3>Approval scope</h3><p class="muted">Create this exact package in Meta as PAUSED. This cannot activate ads or increase the approved ceiling.</p><div class="action-row"><button id="approve-meta-draft" data-package-id="${esc(item.id)}" data-version="${esc(item.version)}" ${!connectorReady || !executableImage || item.status !== "awaiting_approval" ? "disabled" : ""}>Approve & create PAUSED Meta draft</button><button class="secondary" id="replace-ad-package">Prepare new package from latest visual</button></div>${!connectorReady ? `<p class="muted">Connect the Meta ad account, Page and Pixel before execution. Previewing remains available now.</p>` : !executableImage ? `<p class="muted">This package uses a mock SVG. Generate a real PNG, then prepare a new package before Meta execution.</p>` : ""}</div>`}</div>`;
+  return `<div class="card" style="margin:18px 0"><div class="section-head compact"><div><p class="eyebrow">Meta campaign package · v${esc(item.version)}</p><h2>${created ? "PAUSED Meta draft created" : "Review before creating the draft"}</h2></div>${statusChip(item.status)}</div><p class="muted">${esc(item.objective)} · ${esc(item.targeting.countries.join(", "))} · €${Number(item.budget.daily).toFixed(2)}/day planning limit · €${Number(item.budget.lifetime).toFixed(2)} lifetime ceiling · ${item.budget.durationDays} days</p>${item.error ? `<div class="approval-box"><strong>Manual review required</strong><p class="muted">${esc(item.error.message)} A partial Meta draft may exist; inspect Ads Manager before preparing a new package.</p></div>` : ""}<div class="ad-preview-grid">${item.variants.map((variant) => `<article class="ad-preview"><img src="${esc(item.asset.storedUri)}" alt="Approved Meta creative"><small>${esc(variant.angle)} angle</small><h3>${esc(variant.headline)}</h3><p>${esc(variant.primaryText)}</p><strong>Learn more</strong></article>`).join("")}</div>${created ? `<div class="artifact"><small>Meta evidence</small><p><strong>Campaign:</strong> ${esc(item.receipt.campaignId)} · <strong>Ad set:</strong> ${esc(item.receipt.adSetId)} · <strong>Status:</strong> PAUSED</p><p class="muted">Activation remains unavailable until a separate spend approval capability is implemented.</p></div>` : `<div class="approval-box"><h3>Approval scope</h3><p class="muted">Create this exact package in Meta as PAUSED. This cannot activate ads or increase the approved ceiling.</p><div class="action-row"><button id="approve-meta-draft" data-package-id="${esc(item.id)}" data-version="${esc(item.version)}" ${!connectorReady || !executableImage || item.status !== "awaiting_approval" ? "disabled" : ""}>Approve & create PAUSED Meta draft</button><button class="secondary" id="replace-ad-package">Prepare new package from latest visual</button></div>${!connectorReady ? `<p class="muted">The running container cannot see: ${esc(missingMeta.join(", ") || "the required Meta settings")}. Add these variables to the Hostinger container environment and redeploy. A local .env file is not included in the deployed image.</p>` : !executableImage ? `<p class="muted">This package uses a mock SVG. Generate a real PNG, then prepare a new package before Meta execution.</p>` : ""}</div>`}</div>`;
 }
 
 function recommendationCard(item) {

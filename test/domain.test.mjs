@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { initialState, createRun, decideApproval, validateExecution, completeExecution, completeOnboarding, registerProduct, updateVenture } from "../src/domain.mjs";
+import { initialState, createRun, decideApproval, validateExecution, completeExecution, completeOnboarding, registerProduct, activateProduct, updateVenture } from "../src/domain.mjs";
 
 test("onboarding branches to product analysis or autonomous discovery", () => {
   const discovery = initialState();
@@ -15,6 +15,19 @@ test("onboarding branches to product analysis or autonomous discovery", () => {
   registerProduct(existing, { originalName: "my-product.pdf" });
   const productRun = completeOnboarding(existing, { path: "existing_product" });
   assert.ok(productRun.specialists.includes("Product Analyst"));
+});
+
+test("owner can keep multiple products and select the active fulfillment product", () => {
+  const state = initialState();
+  const first = { id: "first", originalName: "first.pdf", storedName: "first.pdf" };
+  const second = { id: "second", originalName: "second.pdf", storedName: "second.pdf" };
+  registerProduct(state, first);
+  registerProduct(state, second);
+  assert.deepEqual(state.onboarding.products.map((item) => item.id), ["second", "first"]);
+  assert.equal(state.onboarding.product.id, "second");
+  activateProduct(state, "first");
+  assert.equal(state.onboarding.activeProductId, "first");
+  assert.equal(state.onboarding.product.originalName, "first.pdf");
 });
 
 test("a run stops at an exact-version approval gate", () => {

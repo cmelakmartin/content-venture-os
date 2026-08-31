@@ -6,8 +6,14 @@ function money(value, minimum, maximum, label) {
   return Math.round(number * 100) / 100;
 }
 
+export function metaAdsConfiguration(env = process.env) {
+  const fields = Object.fromEntries(["META_ACCESS_TOKEN", "META_AD_ACCOUNT_ID", "META_PAGE_ID", "META_PIXEL_ID"].map((name) => [name, Boolean(String(env[name] || "").trim())]));
+  const missing = Object.entries(fields).filter(([, present]) => !present).map(([name]) => name);
+  return { configured: missing.length === 0, fields, missing };
+}
+
 export function metaAdsConfigured(env = process.env) {
-  return Boolean(env.META_ACCESS_TOKEN && env.META_AD_ACCOUNT_ID && env.META_PAGE_ID && env.META_PIXEL_ID);
+  return metaAdsConfiguration(env).configured;
 }
 
 export function createAdPackage({ venture, funnel, artifact, input = {}, baseUrl }) {
