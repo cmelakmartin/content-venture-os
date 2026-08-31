@@ -99,7 +99,7 @@ export async function createPausedMetaDraft(adPackage, imageBytes, options = {})
     return expected === "id" ? result.id : result;
   };
   const startedAt = new Date().toISOString();
-  const campaignValues = { name: adPackage.name, objective: adPackage.objective, buying_type: "AUCTION", status: "PAUSED", special_ad_categories: "[]" };
+  const campaignValues = { name: adPackage.name, objective: adPackage.objective, buying_type: "AUCTION", status: "PAUSED", special_ad_categories: "[]", is_adset_budget_sharing_enabled: "false" };
   await call("campaign validation", `act_${account}/campaigns`, { ...campaignValues, execution_options: JSON.stringify(["validate_only"]) }, "success");
   const campaignId = await call("campaign creation", `act_${account}/campaigns`, campaignValues);
   const start = new Date(Date.now() + 10 * 60_000);

@@ -56,7 +56,9 @@ test("Meta adapter creates only PAUSED objects and returns their evidence", asyn
   assert.equal(receipt.ads.length, 3);
   assert.equal(calls.length, 10);
   assert.equal(calls[0].body.execution_options, '["validate_only"]');
+  assert.equal(calls[0].body.is_adset_budget_sharing_enabled, "false");
   assert.equal(calls[1].body.status, "PAUSED");
+  assert.equal(calls[1].body.is_adset_budget_sharing_enabled, "false");
   assert.equal(calls[2].body.status, "PAUSED");
   assert.equal(calls[2].body.lifetime_budget, "7000");
   assert.equal(calls.filter((call) => call.url.endsWith("/ads")).every((call) => call.body.status === "PAUSED"), true);
