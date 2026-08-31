@@ -49,7 +49,7 @@ test("Meta adapter creates only PAUSED objects and returns their evidence", asyn
     if (url.endsWith("/adimages")) return { ok: true, status: 200, json: async () => ({ images: { approved: { hash: "image-hash" } } }) };
     return { ok: true, status: 200, json: async () => ({ id: `meta-${sequence}` }) };
   };
-  const env = { META_ACCESS_TOKEN: "token", META_AD_ACCOUNT_ID: "act_123", META_PAGE_ID: "page", META_PIXEL_ID: "pixel", META_API_VERSION: "v25.0" };
+  const env = { META_ACCESS_TOKEN: "token", META_AD_ACCOUNT_ID: "act_123", META_PAGE_ID: "page", META_PIXEL_ID: "pixel", META_DSA_BENEFICIARY: "Primebridge Digital", META_DSA_PAYOR: "Martin Example", META_API_VERSION: "v25.0" };
   assert.equal(metaAdsConfigured(env), true);
   const receipt = await createPausedMetaDraft(item, Buffer.from("png-bytes"), { env, fetchImpl });
   assert.equal(receipt.externalStatus, "PAUSED");
@@ -61,14 +61,27 @@ test("Meta adapter creates only PAUSED objects and returns their evidence", asyn
   assert.equal(calls[1].body.is_adset_budget_sharing_enabled, "false");
   assert.equal(calls[2].body.status, "PAUSED");
   assert.equal(calls[2].body.lifetime_budget, "7000");
+  assert.equal(calls[2].body.dsa_beneficiary, "Primebridge Digital");
+  assert.equal(calls[2].body.dsa_payor, "Martin Example");
   assert.equal(calls.filter((call) => call.url.endsWith("/ads")).every((call) => call.body.status === "PAUSED"), true);
   assert.equal(calls.some((call) => Object.values(call.body).includes("ACTIVE")), false);
+});
+
+test("EU targeting requires explicit truthful DSA transparency names before contacting Meta", async () => {
+  const item = fixture(); approveAdPackage(item, "1"); let calls = 0;
+  const fetchImpl = async () => { calls += 1; throw new Error("should not contact Meta"); };
+  await assert.rejects(() => createPausedMetaDraft(item, Buffer.from("png"), { env: { META_ACCESS_TOKEN: "secret", META_AD_ACCOUNT_ID: "act_1", META_PAGE_ID: "2", META_PIXEL_ID: "3" }, fetchImpl }), (error) => {
+    assert.match(error.message, /META_DSA_BENEFICIARY/);
+    assert.equal(error.meta.step, "local DSA validation");
+    return true;
+  });
+  assert.equal(calls, 0);
 });
 
 test("Meta validation exposes safe actionable diagnostics before mutation", async () => {
   const item = fixture(); approveAdPackage(item, "1");
   const fetchImpl = async () => ({ ok: false, status: 400, json: async () => ({ error: { message: "Invalid parameter", code: 100, error_subcode: 18157520, error_user_title: "Ad account setup incomplete", error_user_msg: "Choose an account currency first.", fbtrace_id: "trace-safe" } }) });
-  await assert.rejects(() => createPausedMetaDraft(item, Buffer.from("png"), { env: { META_ACCESS_TOKEN: "secret", META_AD_ACCOUNT_ID: "act_1", META_PAGE_ID: "2", META_PIXEL_ID: "3" }, fetchImpl }), (error) => {
+  await assert.rejects(() => createPausedMetaDraft(item, Buffer.from("png"), { env: { META_ACCESS_TOKEN: "secret", META_AD_ACCOUNT_ID: "act_1", META_PAGE_ID: "2", META_PIXEL_ID: "3", META_DSA_BENEFICIARY: "Business", META_DSA_PAYOR: "Business" }, fetchImpl }), (error) => {
     assert.match(error.message, /campaign validation failed: Choose an account currency first/);
     assert.equal(error.meta.subcode, 18157520);
     assert.equal(error.meta.traceId, "trace-safe");

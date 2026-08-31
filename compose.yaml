@@ -45,6 +45,8 @@ services:
       META_AD_ACCOUNT_ID: "${META_AD_ACCOUNT_ID:-}"
       META_PAGE_ID: "${META_PAGE_ID:-}"
       META_PIXEL_ID: "${META_PIXEL_ID:-}"
+      META_DSA_BENEFICIARY: "${META_DSA_BENEFICIARY:-}"
+      META_DSA_PAYOR: "${META_DSA_PAYOR:-}"
       META_API_VERSION: "${META_API_VERSION:-v25.0}"
     volumes:
       - venture-os-data:/data

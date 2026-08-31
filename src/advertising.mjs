@@ -57,6 +57,16 @@ function envValue(env, name) {
   return value;
 }
 
+const DSA_COUNTRIES = new Set(["AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE", "IS", "LI", "NO"]);
+
+function dsaValue(env, name) {
+  const value = String(env[name] || "").trim();
+  if (value) return value;
+  const error = new Error(`${name} is required for ads targeting the EU/EEA. Enter the real person or organisation name that Meta should disclose.`);
+  error.meta = { step: "local DSA validation", code: null, subcode: null, traceId: null };
+  throw error;
+}
+
 function metaApiError(step, response, result) {
   const source = result?.error || {};
   const detail = source.error_user_msg || source.error_user_title || source.message || `Meta returned HTTP ${response.status}.`;
@@ -89,6 +99,9 @@ export async function createPausedMetaDraft(adPackage, imageBytes, options = {})
   const account = envValue(env, "META_AD_ACCOUNT_ID").replace(/^act_/, "");
   const pageId = envValue(env, "META_PAGE_ID");
   const pixelId = envValue(env, "META_PIXEL_ID");
+  const dsaRequired = adPackage.targeting.countries.some((country) => DSA_COUNTRIES.has(country));
+  const dsaBeneficiary = dsaRequired ? dsaValue(env, "META_DSA_BENEFICIARY") : String(env.META_DSA_BENEFICIARY || "").trim();
+  const dsaPayor = dsaRequired ? dsaValue(env, "META_DSA_PAYOR") : String(env.META_DSA_PAYOR || "").trim();
   const apiVersion = String(env.META_API_VERSION || "v25.0");
   const endpoint = `https://graph.facebook.com/${apiVersion}`;
   const call = async (step, path, values, expected = "id") => {
@@ -109,6 +122,7 @@ export async function createPausedMetaDraft(adPackage, imageBytes, options = {})
     lifetime_budget: String(Math.round(adPackage.budget.lifetime * 100)), start_time: start.toISOString(), end_time: end.toISOString(),
     billing_event: "IMPRESSIONS", optimization_goal: "OFFSITE_CONVERSIONS", bid_strategy: "LOWEST_COST_WITHOUT_CAP", destination_type: "WEBSITE",
     promoted_object: JSON.stringify({ pixel_id: pixelId, custom_event_type: "PURCHASE" }),
+    ...(dsaBeneficiary ? { dsa_beneficiary: dsaBeneficiary } : {}), ...(dsaPayor ? { dsa_payor: dsaPayor } : {}),
     targeting: JSON.stringify({ geo_locations: { countries: adPackage.targeting.countries }, age_min: adPackage.targeting.ageMin, age_max: adPackage.targeting.ageMax }), status: "PAUSED"
   });
   const uploadResponse = await fetchImpl(`${endpoint}/act_${account}/adimages`, {
