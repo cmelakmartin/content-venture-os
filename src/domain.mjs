@@ -32,6 +32,7 @@ export function initialState() {
       audience: "English-speaking solo consultants, coaches and boutique agency owners",
       promise: "A practical path to reducing repetitive admin and marketing work with controlled AI automation.",
       sourceRights: "Purchased source content; adapt and reframe. Do not transfer resale rights or distribute as a raw library.",
+      adTransparency: { beneficiary: "", payor: "" },
       currency: "EUR",
       offers: [
         { name: "AI Time-Leak Diagnostic", price: 0, role: "Lead magnet", paymentUrl: "" },
@@ -219,6 +220,12 @@ export function completeExecution(state, runId, receipt) {
 export function updateVenture(state, input) {
   for (const key of ["name", "audience", "promise", "sourceRights"]) {
     if (typeof input[key] === "string" && input[key].trim()) state.venture[key] = input[key].trim();
+  }
+  if (input.adTransparency && typeof input.adTransparency === "object") {
+    state.venture.adTransparency ||= { beneficiary: "", payor: "" };
+    for (const key of ["beneficiary", "payor"]) {
+      if (typeof input.adTransparency[key] === "string") state.venture.adTransparency[key] = input.adTransparency[key].trim().slice(0, 255);
+    }
   }
   if (Array.isArray(input.offers)) {
     input.offers.forEach((candidate, index) => {

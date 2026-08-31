@@ -21,6 +21,14 @@ test("ad planning creates an immutable review package with bounded spend", () =>
   assert.equal(item.landingUrl, "https://offers.example/v/workflow-guide");
 });
 
+test("ad package snapshots owner-entered transparency identities", () => {
+  const item = createAdPackage({
+    venture: { name: "Guide", audience: "Owners", promise: "A useful guide", adTransparency: { beneficiary: "Promoted Legal Name", payor: "Paying Legal Name" } },
+    funnel: { slug: "guide" }, artifact: { artifactId: "asset", storedUri: "/api/assets/a.png", contentType: "image/png" }, baseUrl: "https://example.com"
+  });
+  assert.deepEqual(item.transparency, { beneficiary: "Promoted Legal Name", payor: "Paying Legal Name" });
+});
+
 test("Meta execution requires the exact approved package version", async () => {
   const item = fixture();
   assert.throws(() => approveAdPackage(item, "2"), /version/);

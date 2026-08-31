@@ -74,6 +74,7 @@ async function loadState() {
     parsed.onboarding.runtimeError ||= null;
     parsed.onboarding.products ||= parsed.onboarding.product ? [parsed.onboarding.product] : [];
     parsed.onboarding.activeProductId ||= parsed.onboarding.product?.id || null;
+    parsed.venture.adTransparency ||= { beneficiary: "", payor: "" };
     parsed.advertising ||= { packages: [] };
     parsed.reviewQueue ||= [];
     return parsed;

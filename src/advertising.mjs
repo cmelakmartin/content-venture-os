@@ -36,6 +36,7 @@ export function createAdPackage({ venture, funnel, artifact, input = {}, baseUrl
     name: `${venture.name} · supervised validation · ${id.slice(0, 8)}`, createdAt: new Date().toISOString(), landingUrl,
     budget: { daily: dailyBudget, lifetime: lifetimeBudget, durationDays, currency: "EUR" },
     targeting: { countries, ageMin: 25, ageMax: 65 },
+    transparency: { beneficiary: String(venture.adTransparency?.beneficiary || "").trim(), payor: String(venture.adTransparency?.payor || "").trim() },
     asset: { artifactId: artifact.artifactId, storedUri: artifact.storedUri, contentType: artifact.contentType },
     variants,
     guardrails: { createPausedOnly: true, activationRequiresSeparateApproval: true, budgetIncreaseRequiresApproval: true, newClaimsRequireApproval: true },
@@ -100,8 +101,10 @@ export async function createPausedMetaDraft(adPackage, imageBytes, options = {})
   const pageId = envValue(env, "META_PAGE_ID");
   const pixelId = envValue(env, "META_PIXEL_ID");
   const dsaRequired = adPackage.targeting.countries.some((country) => DSA_COUNTRIES.has(country));
-  const dsaBeneficiary = dsaRequired ? dsaValue(env, "META_DSA_BENEFICIARY") : String(env.META_DSA_BENEFICIARY || "").trim();
-  const dsaPayor = dsaRequired ? dsaValue(env, "META_DSA_PAYOR") : String(env.META_DSA_PAYOR || "").trim();
+  const configuredBeneficiary = String(adPackage.transparency?.beneficiary || env.META_DSA_BENEFICIARY || "").trim();
+  const configuredPayor = String(adPackage.transparency?.payor || env.META_DSA_PAYOR || "").trim();
+  const dsaBeneficiary = dsaRequired && !configuredBeneficiary ? dsaValue({}, "META_DSA_BENEFICIARY") : configuredBeneficiary;
+  const dsaPayor = dsaRequired && !configuredPayor ? dsaValue({}, "META_DSA_PAYOR") : configuredPayor;
   const apiVersion = String(env.META_API_VERSION || "v25.0");
   const endpoint = `https://graph.facebook.com/${apiVersion}`;
   const call = async (step, path, values, expected = "id") => {

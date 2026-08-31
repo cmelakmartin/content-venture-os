@@ -63,9 +63,10 @@ test("completed actions are idempotent", () => {
 
 test("owner can update paid offer checkout while non-Stripe URLs are rejected", () => {
   const state = initialState();
-  updateVenture(state, { offers: [state.venture.offers[0], { ...state.venture.offers[1], name: "Validation Kit", price: 29, paymentUrl: "https://buy.stripe.com/live_example" }] });
+  updateVenture(state, { adTransparency: { beneficiary: "Primebridge Legal", payor: "Martin Legal" }, offers: [state.venture.offers[0], { ...state.venture.offers[1], name: "Validation Kit", price: 29, paymentUrl: "https://buy.stripe.com/live_example" }] });
   assert.equal(state.venture.offers[1].name, "Validation Kit");
   assert.equal(state.venture.offers[1].price, 29);
   assert.equal(state.venture.offers[1].paymentUrl, "https://buy.stripe.com/live_example");
+  assert.deepEqual(state.venture.adTransparency, { beneficiary: "Primebridge Legal", payor: "Martin Legal" });
   assert.throws(() => updateVenture(state, { offers: [state.venture.offers[0], { ...state.venture.offers[1], paymentUrl: "https://example.com/pay" }] }), /buy\.stripe\.com/);
 });
