@@ -8,6 +8,7 @@ import { createRuntimeStore } from "../src/runtime-store.mjs";
 import { extractProduct } from "../src/product-ingestion.mjs";
 import { verifyStripeEvent } from "../src/connectors.mjs";
 import { createDeliveryToken, tokenHash, verifyDeliveryToken } from "../src/delivery-token.mjs";
+import { createLeadMagnetPdf, createLeadMagnetToken, verifyLeadMagnetToken } from "../src/lead-magnet.mjs";
 
 test("local runtime persists funnel, lead and measured events", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "venture-runtime-"));
@@ -61,6 +62,21 @@ test("delivery links are signed, expiring and tamper evident", () => {
     assert.equal(verifyDeliveryToken(token).entitlementId, "entitlement-1");
     assert.equal(tokenHash(token).length, 64);
     assert.throws(() => verifyDeliveryToken(`${token}x`), /Invalid delivery link/);
+  } finally {
+    if (previous) process.env.DELIVERY_SIGNING_SECRET = previous; else delete process.env.DELIVERY_SIGNING_SECRET;
+  }
+});
+
+test("lead magnets are real PDFs behind signed expiring links", () => {
+  const previous = process.env.DELIVERY_SIGNING_SECRET;
+  process.env.DELIVERY_SIGNING_SECRET = "a-test-secret-with-more-than-24-characters";
+  try {
+    const token = createLeadMagnetToken("lead-1", "content-checklist", new Date(Date.now() + 60_000));
+    assert.equal(verifyLeadMagnetToken(token, "content-checklist").leadId, "lead-1");
+    assert.throws(() => verifyLeadMagnetToken(token, "another-checklist"), /Invalid|expired/);
+    const pdf = createLeadMagnetPdf({ leadMagnet: "21 Signs Checklist", subheadline: "Find the bottleneck." });
+    assert.equal(pdf.subarray(0, 8).toString(), "%PDF-1.4");
+    assert.ok(pdf.length > 2_000);
   } finally {
     if (previous) process.env.DELIVERY_SIGNING_SECRET = previous; else delete process.env.DELIVERY_SIGNING_SECRET;
   }

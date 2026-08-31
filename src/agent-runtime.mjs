@@ -31,6 +31,37 @@ const Recommendation = z.object({
   })
 });
 
+export function cleanAgentText(value, fallback = "") {
+  const cleaned = String(value || "").trim()
+    .replace(/^\s*(?:\d+\s*[).:\-]\s*)+/, "")
+    .replace(/^\s*(?:audience|promise|offer name|headline|subheadline|product summary|problem)\s*[:\-]\s*/i, "")
+    .trim();
+  return cleaned.length >= 8 && /[a-z]{3}/i.test(cleaned) ? cleaned : fallback;
+}
+
+function cleanVenturePackage(output) {
+  const result = { ...output };
+  const fallbacks = {
+    productSummary: "A practical digital product requiring owner review.",
+    audience: "Professionals responsible for improving a content workflow.",
+    problem: "A fragmented content process creates avoidable delay and rework.",
+    promise: "Identify one evidence-based improvement to the content workflow.",
+    offerName: "Content Workflow Validation Sprint",
+    headline: "Find the bottleneck slowing down your content workflow.",
+    subheadline: "Use a practical diagnostic to choose one safe improvement.",
+    leadMagnet: "Content Workflow Diagnostic",
+    welcomeEmailSubject: "Your content workflow diagnostic",
+    welcomeEmailBody: "Thanks for joining. Your diagnostic is ready below.",
+    firstExperiment: "Measure diagnostic downloads and qualified replies."
+  };
+  for (const key of ["productSummary", "audience", "problem", "promise", "offerName", "headline", "subheadline", "leadMagnet", "welcomeEmailSubject", "welcomeEmailBody", "firstExperiment"]) {
+    result[key] = cleanAgentText(output[key], fallbacks[key]);
+  }
+  result.benefits = output.benefits.map((item) => cleanAgentText(item, item));
+  result.rightsAndClaimsFlags = output.rightsAndClaimsFlags.map((item) => cleanAgentText(item, item));
+  return result;
+}
+
 export function agentProviderName() {
   return String(process.env.AGENT_PROVIDER || "openai_agents").toLowerCase();
 }
@@ -83,7 +114,7 @@ async function analyzeProductWithOpenAIAgents(productText, metadata = {}) {
   const input = `Product filename: ${metadata.name || "uploaded product"}\nSource-rights note: ${metadata.sourceRights || "Customer asserts they own or licensed the source."}\n\nExtracted product content:\n${productText}`;
   const result = await run(manager, input, { maxTurns: 12 });
   if (!result.finalOutput) throw new Error("The agent run returned no venture package.");
-  return { provider: "openai_agents", model, output: result.finalOutput, itemCount: result.newItems?.length || 0, trace: null };
+  return { provider: "openai_agents", model, output: cleanVenturePackage(result.finalOutput), itemCount: result.newItems?.length || 0, trace: null };
 }
 
 async function recommendWithOpenAIAgents(metrics) {
@@ -100,7 +131,10 @@ async function recommendWithOpenAIAgents(metrics) {
 }
 
 export async function analyzeProductWithAgents(productText, metadata = {}) {
-  if (agentProviderName() === "crewai") return callCrewAI("/v1/analyze-product", { productText, metadata }, VenturePackage);
+  if (agentProviderName() === "crewai") {
+    const result = await callCrewAI("/v1/analyze-product", { productText, metadata }, VenturePackage);
+    return { ...result, output: cleanVenturePackage(result.output) };
+  }
   return analyzeProductWithOpenAIAgents(productText, metadata);
 }
 

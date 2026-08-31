@@ -41,6 +41,7 @@ test("route boundary leaves only buyer and independently authenticated integrati
     ["GET", "/login"], ["GET", "/login.js"], ["GET", "/styles.css"],
     ["GET", "/v/my-product"], ["POST", "/api/funnel/my-product/view"], ["POST", "/api/funnel/my-product/lead"],
     ["POST", "/api/webhooks/stripe"], ["POST", "/api/webhooks/resend"], ["GET", "/download/signed-token"],
+    ["GET", "/lead-magnet/content-checklist.pdf"], ["GET", "/public-assets/123e4567-e89b-12d3-a456-426614174000.png"],
     ["POST", "/api/n8n/actions/prepare-fulfillment"], ["POST", "/api/auth/login"]
   ];
   for (const [method, pathname] of publicRoutes) assert.equal(requiresOwnerSession(method, pathname), false, `${method} ${pathname}`);

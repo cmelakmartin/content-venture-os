@@ -25,6 +25,8 @@ export function requiresOwnerSession(method, pathname) {
   if (method === "GET" && ["/login", "/login.js", "/styles.css"].includes(pathname)) return false;
   if (pathname.startsWith("/api/auth/")) return false;
   if (method === "GET" && /^\/v\/[a-z0-9-]+$/.test(pathname)) return false;
+  if (method === "GET" && /^\/public-assets\/[a-f0-9-]+\.(?:png|svg)$/.test(pathname)) return false;
+  if (method === "GET" && /^\/lead-magnet\/[a-z0-9-]+\.pdf$/.test(pathname)) return false;
   if (method === "POST" && /^\/api\/funnel\/[a-z0-9-]+\/(?:view|lead)$/.test(pathname)) return false;
   if (method === "POST" && ["/api/webhooks/stripe", "/api/webhooks/resend"].includes(pathname)) return false;
   if (method === "GET" && pathname.startsWith("/download/")) return false;

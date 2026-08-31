@@ -5,12 +5,13 @@ import crypto from "node:crypto";
 import { initialState, createRun, decideApproval, validateExecution, completeExecution, updateVenture, completeOnboarding, registerProduct } from "./domain.mjs";
 import { createRuntimeStore } from "./runtime-store.mjs";
 import { extractProduct } from "./product-ingestion.mjs";
-import { agentModelLabel, agentProviderName, agentRuntimeConfigured, analyzeProductWithAgents } from "./agent-runtime.mjs";
+import { agentModelLabel, agentProviderName, agentRuntimeConfigured, analyzeProductWithAgents, cleanAgentText } from "./agent-runtime.mjs";
 import { sendWelcomeEmail, verifyStripeEvent, verifyResendEvent } from "./connectors.mjs";
 import { tokenHash, verifyDeliveryToken } from "./delivery-token.mjs";
 import { dispatchN8n, n8nConfigured, requireN8nAuthorization } from "./n8n-client.mjs";
 import { createBusinessActions } from "./business-actions.mjs";
 import { createOwnerAuth, requiresOwnerSession } from "./owner-auth.mjs";
+import { createLeadMagnetPdf, createLeadMagnetToken, verifyLeadMagnetToken } from "./lead-magnet.mjs";
 
 const port = Number(process.env.PORT || 3000);
 const dataDir = path.resolve(process.env.DATA_DIR || "./data");
@@ -23,6 +24,9 @@ const ownerAuth = createOwnerAuth();
 await fs.mkdir(assetsDir, { recursive: true });
 await fs.mkdir(uploadsDir, { recursive: true });
 let state = await loadState();
+const ventureDefaults = initialState().venture;
+state.venture.audience = cleanAgentText(state.venture.audience, ventureDefaults.audience);
+state.venture.promise = cleanAgentText(state.venture.promise, ventureDefaults.promise);
 const runtime = await createRuntimeStore(dataDir);
 const actions = createBusinessActions({ runtime, getState: async () => state });
 let n8nConnectionStatus = n8nConfigured() ? "configured" : "needs_setup";
@@ -197,12 +201,20 @@ function slugify(value) {
   return value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "venture";
 }
 
+function publicUrl(req, pathname) {
+  const configured = String(process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
+  if (configured) return `${configured}${pathname}`;
+  const protocol = String(req.headers["x-forwarded-proto"] || "http").split(",")[0];
+  return `${protocol}://${req.headers.host}${pathname}`;
+}
+
 function funnelPage(funnel) {
   const content = funnel.content;
   const checkoutOffer = state.venture.offers.find((offer) => offer.price > 0 && offer.paymentUrl);
   const checkout = checkoutOffer?.paymentUrl || "";
   const checkoutLabel = checkoutOffer ? `${checkout.includes("/test_") ? "Test checkout" : "Buy now"} · €${Number(checkoutOffer.price).toFixed(2)}` : "";
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(content.offerName)}</title><style>:root{--ink:#1f201d;--paper:#f5efe6;--accent:#a85232}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 system-ui,sans-serif}.wrap{max-width:980px;margin:auto;padding:72px 24px}.eyebrow{text-transform:uppercase;letter-spacing:.16em;color:var(--accent);font-size:12px;font-weight:700}h1{font:52px/1.05 Georgia,serif;max-width:780px;margin:16px 0}h2{font:30px Georgia,serif}.lead{font-size:20px;color:#656159;max-width:680px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:42px 0}.card{background:#fffaf3;border:1px solid #ded3c6;border-radius:14px;padding:22px}.optin{display:grid;grid-template-columns:1fr auto;gap:10px;max-width:680px;background:#fffaf3;padding:18px;border-radius:12px;border:1px solid #ded3c6}input{padding:13px;border:1px solid #cfc2b3;border-radius:7px;font:inherit}button,a.cta{padding:13px 18px;border:0;border-radius:7px;background:var(--ink);color:white;text-decoration:none;font-weight:700;cursor:pointer}.fine{font-size:12px;color:#777}.success{color:#1f6c52;font-weight:700}@media(max-width:700px){h1{font-size:40px}.grid{grid-template-columns:1fr}.optin{grid-template-columns:1fr}}</style></head><body><main class="wrap"><p class="eyebrow">${escapeHtml(content.leadMagnet || "Practical diagnostic")}</p><h1>${escapeHtml(content.headline)}</h1><p class="lead">${escapeHtml(content.subheadline || content.promise)}</p><div class="grid">${(content.benefits || []).slice(0,3).map((benefit) => `<div class="card">${escapeHtml(benefit)}</div>`).join("")}</div><section><h2>Start with the free diagnostic</h2><form class="optin" id="lead-form"><input type="email" name="email" required placeholder="you@example.com" aria-label="Email address"><button>Send my diagnostic</button><label class="fine" style="grid-column:1/-1"><input type="checkbox" name="consent" required style="width:auto"> I agree to receive this diagnostic and related educational emails. Unsubscribe anytime.</label></form><p id="message" role="status"></p>${checkout ? `<p><a class="cta" href="${escapeHtml(checkout)}">${escapeHtml(checkoutLabel)}</a></p>` : ""}</section><p class="fine">Educational material. Results vary. This funnel is served by the local Venture Runtime.</p></main><script>fetch('/api/funnel/${encodeURIComponent(funnel.slug)}/view',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).catch(()=>{});document.querySelector('#lead-form').addEventListener('submit',async(e)=>{e.preventDefault();const b=e.submitter;b.disabled=true;const f=new FormData(e.target);const r=await fetch('/api/funnel/${encodeURIComponent(funnel.slug)}/lead',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:f.get('email'),consent:f.get('consent')==='on'})});const j=await r.json();document.querySelector('#message').textContent=r.ok?(j.emailStatus==='sent'?'Diagnostic requested and email sent.':'Lead saved. Email connector is not configured.'):(j.error||'Request failed');document.querySelector('#message').className=r.ok?'success':'';b.disabled=false;});</script></body></html>`;
+  const publicVisual = state.venture.publicVisualUri ? `<img class="hero-art" src="${escapeHtml(state.venture.publicVisualUri)}" alt="Editorial visual for ${escapeHtml(state.venture.name)}">` : "";
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(content.offerName)}</title><style>:root{--ink:#1f201d;--paper:#f5efe6;--accent:#a85232}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 system-ui,sans-serif}.wrap{max-width:980px;margin:auto;padding:72px 24px}.eyebrow{text-transform:uppercase;letter-spacing:.16em;color:var(--accent);font-size:12px;font-weight:700}h1{font:52px/1.05 Georgia,serif;max-width:780px;margin:16px 0}h2{font:30px Georgia,serif}.lead{font-size:20px;color:#656159;max-width:680px}.hero-art{display:block;width:100%;max-width:760px;max-height:520px;object-fit:cover;border-radius:18px;margin:34px 0;border:1px solid #ded3c6}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:42px 0}.card{background:#fffaf3;border:1px solid #ded3c6;border-radius:14px;padding:22px}.optin{display:grid;grid-template-columns:1fr auto;gap:10px;max-width:680px;background:#fffaf3;padding:18px;border-radius:12px;border:1px solid #ded3c6}input{padding:13px;border:1px solid #cfc2b3;border-radius:7px;font:inherit}button,a.cta{padding:13px 18px;border:0;border-radius:7px;background:var(--ink);color:white;text-decoration:none;font-weight:700;cursor:pointer}.fine{font-size:12px;color:#777}.success{color:#1f6c52;font-weight:700}@media(max-width:700px){h1{font-size:40px}.grid{grid-template-columns:1fr}.optin{grid-template-columns:1fr}}</style></head><body><main class="wrap"><p class="eyebrow">${escapeHtml(content.leadMagnet || "Practical diagnostic")}</p><h1>${escapeHtml(content.headline)}</h1><p class="lead">${escapeHtml(content.subheadline || content.promise)}</p>${publicVisual}<div class="grid">${(content.benefits || []).slice(0,3).map((benefit) => `<div class="card">${escapeHtml(benefit)}</div>`).join("")}</div><section><h2>Start with the free diagnostic</h2><form class="optin" id="lead-form"><input type="email" name="email" required placeholder="you@example.com" aria-label="Email address"><button>Send my diagnostic</button><label class="fine" style="grid-column:1/-1"><input type="checkbox" name="consent" required style="width:auto"> I agree to receive this diagnostic and related educational emails. Unsubscribe anytime.</label></form><p id="message" role="status"></p>${checkout ? `<p><a class="cta" href="${escapeHtml(checkout)}">${escapeHtml(checkoutLabel)}</a></p>` : ""}</section><p class="fine">Educational material. Results vary. This funnel is served by the Venture Runtime.</p></main><script>fetch('/api/funnel/${encodeURIComponent(funnel.slug)}/view',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).catch(()=>{});document.querySelector('#lead-form').addEventListener('submit',async(e)=>{e.preventDefault();const b=e.submitter;b.disabled=true;const f=new FormData(e.target);const r=await fetch('/api/funnel/${encodeURIComponent(funnel.slug)}/lead',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:f.get('email'),consent:f.get('consent')==='on'})});const j=await r.json();document.querySelector('#message').textContent=r.ok?(['sent','queued'].includes(j.emailStatus)?'Check your inbox for the PDF diagnostic and next steps.':'Your details were saved, but email delivery needs attention.'):(j.error||'Request failed');document.querySelector('#message').className=r.ok?'success':'';b.disabled=false;});</script></body></html>`;
 }
 
 function escapeHtml(value = "") {
@@ -246,6 +258,16 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
       return res.end(funnelPage(funnel));
     }
+    match = url.pathname.match(/^\/lead-magnet\/([a-z0-9-]+)\.pdf$/);
+    if (req.method === "GET" && match) {
+      const claims = verifyLeadMagnetToken(url.searchParams.get("token"), match[1]);
+      const funnel = await runtime.getFunnel(match[1]);
+      if (!funnel) return json(res, 404, { error: "Lead magnet not found" });
+      const pdf = createLeadMagnetPdf(funnel.content);
+      await runtime.event(funnel.ventureId, "lead_magnet.downloaded", "signed_delivery", { leadId: claims.leadId, slug: match[1] });
+      res.writeHead(200, { "content-type": "application/pdf", "content-disposition": `attachment; filename="${match[1]}-checklist.pdf"`, "cache-control": "private, no-store" });
+      return res.end(pdf);
+    }
     match = url.pathname.match(/^\/api\/funnel\/([a-z0-9-]+)\/view$/);
     if (req.method === "POST" && match) {
       const funnel = await runtime.getFunnel(match[1]);
@@ -262,12 +284,16 @@ const server = http.createServer(async (req, res) => {
       if (!/^\S+@\S+\.\S+$/.test(String(input.email || ""))) throw new Error("Enter a valid email address.");
       const lead = await runtime.lead(funnel.ventureId, String(input.email), true, match[1]);
       await runtime.event(funnel.ventureId, "lead.captured", "public_funnel", { leadId: lead.id, slug: match[1] });
+      const magnetExpiresAt = new Date(Date.now() + Number(process.env.LEAD_MAGNET_LINK_HOURS || 168) * 60 * 60 * 1000);
+      const magnetToken = createLeadMagnetToken(lead.id, match[1], magnetExpiresAt);
+      const magnetUrl = publicUrl(req, `/lead-magnet/${encodeURIComponent(match[1])}.pdf?token=${encodeURIComponent(magnetToken)}`);
+      const welcomeHtml = `<p>${escapeHtml(funnel.content.welcomeEmailBody || "Thanks for joining.")}</p><p><a href="${escapeHtml(magnetUrl)}">Download ${escapeHtml(funnel.content.leadMagnet || "your PDF diagnostic")}</a></p><p>This protected link expires in ${Number(process.env.LEAD_MAGNET_LINK_HOURS || 168)} hours.</p>`;
       if (n8nConfigured()) {
-        const execution = await dispatchCapability(process.env.N8N_WELCOME_WEBHOOK || "webhook/content-venture-welcome", "email.send_welcome", { ventureId: funnel.ventureId, leadId: lead.id, email: { from: process.env.RESEND_FROM || "", to: lead.email, subject: funnel.content.welcomeEmailSubject || "Your diagnostic", html: `<p>${escapeHtml(funnel.content.welcomeEmailBody || "Thanks for joining.")}</p>` } }, `welcome-${lead.id}`);
+        const execution = await dispatchCapability(process.env.N8N_WELCOME_WEBHOOK || "webhook/content-venture-welcome", "email.send_welcome", { ventureId: funnel.ventureId, leadId: lead.id, email: { from: process.env.RESEND_FROM || "", to: lead.email, subject: funnel.content.welcomeEmailSubject || "Your diagnostic", html: welcomeHtml } }, `welcome-${lead.id}`);
         await runtime.event(funnel.ventureId, "email.queued", "n8n", { leadId: lead.id, execution });
         return json(res, 201, { leadId: lead.id, emailStatus: "queued" });
       }
-      const email = await sendWelcomeEmail({ to: lead.email, subject: funnel.content.welcomeEmailSubject || "Your diagnostic", html: `<p>${escapeHtml(funnel.content.welcomeEmailBody || "Thanks for joining.")}</p>` });
+      const email = await sendWelcomeEmail({ to: lead.email, subject: funnel.content.welcomeEmailSubject || "Your diagnostic", html: welcomeHtml });
       await runtime.event(funnel.ventureId, `email.${email.status}`, email.provider, { leadId: lead.id, externalId: email.externalId || null });
       return json(res, 201, { leadId: lead.id, emailStatus: email.status });
     }
@@ -382,6 +408,20 @@ const server = http.createServer(async (req, res) => {
     }
     match = url.pathname.match(/^\/api\/assets\/([a-f0-9-]+\.(?:png|svg))$/);
     if (req.method === "GET" && match) return serveFile(res, path.join(assetsDir, match[1]), match[1].endsWith(".png") ? "image/png" : "image/svg+xml");
+    match = url.pathname.match(/^\/api\/assets\/([a-f0-9-]+\.(?:png|svg))\/publish$/);
+    if (req.method === "POST" && match) {
+      const privateUri = `/api/assets/${match[1]}`;
+      const artifact = state.runs.flatMap((run) => run.receipt?.outputArtifacts || []).find((item) => item.storedUri === privateUri);
+      if (!artifact) return json(res, 404, { error: "Approved visual artifact not found." });
+      state.venture.publicVisualUri = `/public-assets/${match[1]}`;
+      await persist(); await runtime.event(state.venture.id, "visual.published", "owner", { artifactId: artifact.artifactId, uri: state.venture.publicVisualUri });
+      return json(res, 200, { published: true, uri: state.venture.publicVisualUri });
+    }
+    match = url.pathname.match(/^\/public-assets\/([a-f0-9-]+\.(?:png|svg))$/);
+    if (req.method === "GET" && match) {
+      if (state.venture.publicVisualUri !== `/public-assets/${match[1]}`) return json(res, 404, { error: "Published visual not found." });
+      return serveFile(res, path.join(assetsDir, match[1]), match[1].endsWith(".png") ? "image/png" : "image/svg+xml");
+    }
     match = url.pathname.match(/^\/download\/([^/]+)$/);
     if (req.method === "GET" && match) {
       const token = decodeURIComponent(match[1]);

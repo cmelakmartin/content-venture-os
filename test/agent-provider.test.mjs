@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
-import { analyzeProductWithAgents, recommendFromMetrics } from "../src/agent-runtime.mjs";
+import { analyzeProductWithAgents, cleanAgentText, recommendFromMetrics } from "../src/agent-runtime.mjs";
+
+test("agent field cleanup removes leaked numbered headings and rejects bare ordinals", () => {
+  assert.equal(cleanAgentText("3) Audience: Independent consultants", "fallback"), "Independent consultants");
+  assert.equal(cleanAgentText("5)", "A practical outcome for content teams"), "A practical outcome for content teams");
+});
 
 test("CrewAI provider adapter authenticates and validates structured outputs", async () => {
   const secret = "test-crewai-shared-secret-long-enough";
