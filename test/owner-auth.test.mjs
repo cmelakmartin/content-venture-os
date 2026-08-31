@@ -46,7 +46,7 @@ test("route boundary leaves only buyer and independently authenticated integrati
   ];
   for (const [method, pathname] of publicRoutes) assert.equal(requiresOwnerSession(method, pathname), false, `${method} ${pathname}`);
   const privateRoutes = [
-    ["GET", "/"], ["GET", "/app.js"], ["GET", "/api/state"], ["GET", "/api/assets/private.png"],
+    ["GET", "/"], ["GET", "/app.js"], ["GET", "/api/state"], ["GET", "/api/assets/private.png"], ["GET", "/api/funnel/my-product/preview"],
     ["POST", "/api/product-upload"], ["POST", "/api/runs"], ["POST", "/api/runtime/optimize"]
   ];
   for (const [method, pathname] of privateRoutes) assert.equal(requiresOwnerSession(method, pathname), true, `${method} ${pathname}`);

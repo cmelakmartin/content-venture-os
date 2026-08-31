@@ -9,6 +9,7 @@ import { extractProduct } from "../src/product-ingestion.mjs";
 import { verifyStripeEvent } from "../src/connectors.mjs";
 import { createDeliveryToken, tokenHash, verifyDeliveryToken } from "../src/delivery-token.mjs";
 import { createLeadMagnetPdf, createLeadMagnetToken, verifyLeadMagnetToken } from "../src/lead-magnet.mjs";
+import { createBusinessActions } from "../src/business-actions.mjs";
 
 test("local runtime persists funnel, lead and measured events", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "venture-runtime-"));
@@ -79,6 +80,30 @@ test("lead magnets are real PDFs behind signed expiring links", () => {
     assert.ok(pdf.length > 2_000);
   } finally {
     if (previous) process.env.DELIVERY_SIGNING_SECRET = previous; else delete process.env.DELIVERY_SIGNING_SECRET;
+  }
+});
+
+test("paid fulfillment entitles the buyer to the exact uploaded product", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "venture-fulfillment-"));
+  const previousDatabase = process.env.DATABASE_URL;
+  const previousSecret = process.env.DELIVERY_SIGNING_SECRET;
+  const previousBaseUrl = process.env.PUBLIC_BASE_URL;
+  delete process.env.DATABASE_URL;
+  process.env.DELIVERY_SIGNING_SECRET = "a-test-secret-with-more-than-24-characters";
+  process.env.PUBLIC_BASE_URL = "https://venture.example";
+  try {
+    const store = await createRuntimeStore(directory);
+    const state = { venture: { id: "venture-paid", name: "Paid guide" }, onboarding: { product: { originalName: "owner-upload.pdf", storedName: "stored-owner-upload.pdf" } } };
+    const actions = createBusinessActions({ runtime: store, getState: async () => state });
+    const prepared = await actions.prepareFulfillment({ externalOrderId: "cs_paid", email: "buyer@example.com", amount: 19, currency: "EUR", source: "stripe" });
+    const snapshot = await store.snapshot("venture-paid");
+    assert.equal(snapshot.entitlements[0].productStoredName, "stored-owner-upload.pdf");
+    assert.equal(prepared.email.subject, "Your Paid guide download");
+  } finally {
+    if (previousDatabase) process.env.DATABASE_URL = previousDatabase; else delete process.env.DATABASE_URL;
+    if (previousSecret) process.env.DELIVERY_SIGNING_SECRET = previousSecret; else delete process.env.DELIVERY_SIGNING_SECRET;
+    if (previousBaseUrl) process.env.PUBLIC_BASE_URL = previousBaseUrl; else delete process.env.PUBLIC_BASE_URL;
+    await fs.rm(directory, { recursive: true, force: true });
   }
 });
 
